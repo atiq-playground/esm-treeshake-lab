@@ -6,43 +6,36 @@
 [![Bun](https://img.shields.io/badge/bun-1.3.14-fbf0df?logo=bun&logoColor=f472b6)](package.json)
 [![License](https://img.shields.io/github/license/atiq-playground/esm-treeshake-lab)](LICENSE)
 
-![Lab progress](https://img.shields.io/badge/lab_progress-90%25-yellowgreen)
-`██████████████████░░` **90%** — monorepo + shake proof work locally; not ready until this lands on GitHub with green CI.
+![Lab progress](https://img.shields.io/badge/lab_progress-95%25-brightgreen)
+`███████████████████░` **95%** - on GitHub with green CI and [v0.1.0](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.1.0). Ops leftovers → [Repo todos](#repo-todos-not-configured-yet).
 
-Nx + Bun monorepo lab: Service SDKs (`@service/*`) built with `tsc` → `dist/`,
-consumed by `apps/web` (Next.js). Auth + account HTTP live in one Cloudflare
-Worker — **`apps/identity-service`** (Hono + D1).
+**What this is**  
+A Nx + Bun lab for **member tree-shaking** of Service SDKs (`@service/*` → `tsc` → `dist/` → Next).
 
-## Identity service
+**Why a full app**  
+Shake-out is proven on a close-to-real demo (auth, accounts, Worker), not toy scripts, so you can see how it looks in something you'd ship.
 
-One deployable that is the usual **identity** surface: tokens/OIDC-shaped auth
-and user/account APIs. Same URL prefixes (`/public/api`, `/admin/api`) so
-`@service/token-*` and `@service/account-*` keep calling distinct SDK packages
-against one origin. Easy to extract into its own repo for other demo apps.
+## Layout
 
-## Security / identity data model
-
-- Passwords: **PBKDF2-SHA256**, 210k iterations, random salt (`salt$hash`)
-- Opaque access/refresh tokens: only **SHA-256 hashes** in D1; refresh **rotation** + `family_id`
-- Users: `updated_at`, `deleted_at` (soft delete), `rvn` (optimistic concurrency),
-  `email_verified_at`, `password_changed_at`, `last_login_at`, lockout fields
-- `roles` / `user_roles`; append-only `audit_logs`
-- Password change / suspend / soft-delete / admin reset → sessions revoked
-- No MFA yet
-
-Still a **lab** IdP (HS256 shared secret, no reset emails), not full production IAM.
+| Path | Role |
+|------|------|
+| `apps/web` | Next.js app + cookie auth BFF |
+| `apps/identity-service` | Tokens + account APIs (Worker + D1) |
+| `packages/services/*` | `@service/account-*`, `@service/token-*` |
+| `packages/core/*` | Shared service core |
+| `scripts/check-treeshake-markers.sh` | CI proof unused SDK markers are gone |
 
 ## Getting started
 
 ```bash
 bun install
-
+cp apps/identity-service/.dev.vars.example apps/identity-service/.dev.vars
 bun run db:migrate:identity
 
-# Terminal A — identity Worker (:8787)
+# Terminal A - identity Worker (:8787)
 bun run dev:identity
 
-# Terminal B — Next
+# Terminal B - Next
 export AUTH_PUBLIC_API_URL=http://127.0.0.1:8787/public/api
 export AUTH_ADMIN_API_URL=http://127.0.0.1:8787/admin/api
 export ACCOUNT_PUBLIC_API_URL=http://127.0.0.1:8787/public/api
@@ -54,14 +47,38 @@ bun run dev
 
 Demo login: `demo@example.com` / `password`.
 
-Copy `apps/identity-service/.dev.vars.example` → `apps/identity-service/.dev.vars`.
+## Scripts
 
-## Scripts (root)
-
-| Script | Command |
-|--------|---------|
-| `dev` | `@apps/web` Next dev |
+| Script | What it does |
+|--------|----------------|
+| `dev` | Next dev (`@apps/web`) |
 | `dev:identity` | Identity Worker (`wrangler dev`) |
 | `db:migrate:identity` | Apply D1 migrations locally |
 | `build` | `nx run-many -t build` |
-| `check:treeshake` | Marker search on `apps/web/.next` |
+| `check:treeshake` | Search `.next` for shake markers |
+| `test:e2e` | Playwright (local; not in CI yet) |
+| `orchestrate` | Sandcastle AFK runner (**not configured**) |
+
+## Identity service
+
+One deployable "identity" surface: OIDC-shaped tokens and user/account APIs under `/public/api` and `/admin/api`, so token and account SDKs stay separate packages against one origin. Easy to extract later for other demos.
+
+**Data model (lab IdP, not production IAM)**
+
+- Passwords: PBKDF2-SHA256 (210k), `salt$hash`
+- Opaque access/refresh: SHA-256 hashes only; refresh rotation + `family_id`
+- Users: soft delete, `rvn`, email/password/login timestamps, lockout
+- `roles` / `user_roles`; append-only `audit_logs`
+- Password change / suspend / soft-delete / admin reset → sessions revoked
+- No MFA; HS256 shared secret; no reset emails
+
+## Repo todos (not configured yet)
+
+Scaffolding exists; these are **not wired** until setup is finished:
+
+| Item | Gap |
+|------|-----|
+| **Sandcastle / AFK** | No `.sandcastle/.env`, Docker image, or AFK Action; `setup-skills` triage still outstanding. See [`.sandcastle/README.md`](.sandcastle/README.md) |
+| **Cloudflare Deploy** | Repo secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` unset; preview deploy will fail |
+| **E2E in CI** | Playwright under `apps/web`; CI does not run `test:e2e` yet |
+| **Lab IdP limits** | MFA / reset email / stronger crypto; intentional until promoted beyond demo |
