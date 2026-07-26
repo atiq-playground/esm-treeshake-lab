@@ -1,6 +1,8 @@
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { Space_Grotesk, Space_Mono } from "next/font/google";
 import type { ReactNode } from "react";
+import { RepoStarsProvider } from "@/components/repo-stars-context";
+import { fetchRepoStars } from "@/lib/github-stars";
 import "./global.css";
 
 const sans = Space_Grotesk({
@@ -15,7 +17,9 @@ const mono = Space_Mono({
 });
 
 // Doto via CSS fallback stack when available; Space Mono carries display.
-export default function Layout({ children }: { children: ReactNode }) {
+export default async function Layout({ children }: { children: ReactNode }) {
+  const stars = await fetchRepoStars();
+
   return (
     <html
       lang="en"
@@ -29,7 +33,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             enabled: true,
           }}
         >
-          {children}
+          <RepoStarsProvider stars={stars}>{children}</RepoStarsProvider>
         </RootProvider>
       </body>
     </html>

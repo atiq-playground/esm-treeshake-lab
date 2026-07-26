@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "timestamp": "2026-07-26T14:53:22.443Z",
+  "timestamp": "2026-07-26T15:28:00.963Z",
   "case": "baseline",
-  "n": 3,
+  "n": 100,
   "fns": 2,
   "cycles": false,
   "callSites": 1,
@@ -10,57 +10,57 @@
     0
   ],
   "seed": null,
-  "surfaceFns": 6,
+  "surfaceFns": 200,
   "host": "esbuild",
-  "mode": "smoke",
-  "note": "ESM call sites: 1 (import { used } from svc-0 only). Surface still 6 fns across 3 packages; --fns only grows what can be shaken, not what ESM calls.",
+  "mode": "generated",
+  "note": "ESM call sites: 1 (import { used } from svc-0 only). Surface still 200 fns across 100 packages; --fns only grows what can be shaken, not what ESM calls.",
   "arms": {
     "singleton": {
-      "bytes": 8337,
-      "buildMs": 22,
-      "markersUsedPresent": 3,
-      "markersUnusedRetained": 3,
-      "markersUnusedTotal": 3,
+      "bytes": 262986,
+      "buildMs": 47,
+      "markersUsedPresent": 100,
+      "markersUnusedRetained": 100,
+      "markersUnusedTotal": 100,
       "size": {
-        "bytes": 8337,
-        "kb": 8.142,
-        "mb": 0.008,
-        "gb": 0.000008,
-        "primary": "8.1 KB",
-        "detail": "8,337 B · 8.1 KB"
+        "bytes": 262986,
+        "kb": 256.822,
+        "mb": 0.2508,
+        "gb": 0.000245,
+        "primary": "256.8 KB",
+        "detail": "262,986 B · 256.8 KB · 0.25 MB"
       }
     },
     "esm": {
-      "bytes": 192,
+      "bytes": 200,
       "buildMs": 2,
       "markersUsedPresent": 1,
       "markersUnusedRetained": 0,
       "markersUnusedTotal": 1,
       "size": {
-        "bytes": 192,
-        "kb": 0.188,
+        "bytes": 200,
+        "kb": 0.195,
         "mb": 0.0002,
         "gb": 0,
-        "primary": "192 B",
-        "detail": "192 B"
+        "primary": "200 B",
+        "detail": "200 B"
       }
     }
   },
   "benefit": {
-    "bytesSavedPct": 97.7,
-    "bytesSaved": 8145,
+    "bytesSavedPct": 99.9,
+    "bytesSaved": 262786,
     "sizeSaved": {
-      "bytes": 8145,
-      "kb": 7.954,
-      "mb": 0.0078,
-      "gb": 0.000008,
-      "primary": "8 KB",
-      "detail": "8,145 B · 8 KB"
+      "bytes": 262786,
+      "kb": 256.627,
+      "mb": 0.2506,
+      "gb": 0.000245,
+      "primary": "256.6 KB",
+      "detail": "262,786 B · 256.6 KB · 0.25 MB"
     },
-    "unusedMarkersDelta": 3,
-    "esmOfSingletonPct": 2.3,
-    "singletonVsEsmFactor": 43.4,
-    "callSiteCoveragePct": 16.67,
+    "unusedMarkersDelta": 100,
+    "esmOfSingletonPct": 0.08,
+    "singletonVsEsmFactor": 1314.9,
+    "callSiteCoveragePct": 0.5,
     "unusedRemovedPct": 100
   }
 }

@@ -11,6 +11,10 @@ A Nx + Bun lab that **measures** singleton-plugin packaging vs ESM selective imp
 **Focus**  
 Metrics only: bytes, unused markers, build time. No auth / identity demo.
 
+**If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.**
+
+[![Star on GitHub](https://img.shields.io/github/stars/atiq-playground/esm-treeshake-lab?style=social)](https://github.com/atiq-playground/esm-treeshake-lab)
+
 ## Layout
 
 | Path | Role |
@@ -60,8 +64,10 @@ bun run lab:bench:partial -- --n=100 --fns=40 --used=8
 # optional: shuffle which K packages (reproducible)
 bun run lab:bench:partial -- --n=100 --used=50 --seed=42
 
-# optional stress (see docs/research/scale-bench-n1000-bun-esbuild.md)
+# optional stress ladder (see docs/research/scale-bench-n1000-bun-esbuild.md)
 bun run lab:bench -- --n=1000
+# full N × use-case practicality sweep → docs/research/scale-bench-sweep.json
+bun run lab:probe:scale
 ```
 
 Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
@@ -90,7 +96,12 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
 | `lab:bench:wide` | UC2: many fns/svc defined (ESM still calls 1) |
 | `lab:bench:cycles` | UC3: wide + cyclic package ring |
 | `lab:bench:partial` | UC4: both arms call `--used=K` sites |
+| `lab:probe:scale` | N × UC practicality sweep → `docs/research/scale-bench-sweep.json` |
 
 ## Map
 
 Planning map (destination met): [Singleton vs ESM scale bench](https://github.com/atiq-playground/esm-treeshake-lab/issues/15).
+
+## Support
+
+If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.

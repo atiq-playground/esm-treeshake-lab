@@ -1,34 +1,41 @@
 {
   "version": 1,
-  "timestamp": "2026-07-26T14:29:35.117Z",
+  "timestamp": "2026-07-26T15:28:01.349Z",
   "case": "wide",
   "n": 100,
-  "fns": 40,
+  "fns": 20,
   "cycles": false,
+  "callSites": 1,
+  "usedPackageIds": [
+    0
+  ],
+  "seed": null,
+  "surfaceFns": 2000,
   "host": "esbuild",
   "mode": "generated",
+  "note": "ESM call sites: 1 (import { used } from svc-0 only). Surface still 2000 fns across 100 packages; --fns only grows what can be shaken, not what ESM calls.",
   "arms": {
     "singleton": {
-      "bytes": 8663206,
-      "buildMs": 74,
+      "bytes": 4241406,
+      "buildMs": 69,
       "markersUsedPresent": 100,
-      "markersUnusedRetained": 3900,
-      "markersUnusedTotal": 3900,
+      "markersUnusedRetained": 1900,
+      "markersUnusedTotal": 1900,
       "size": {
-        "bytes": 8663206,
-        "kb": 8460.162,
-        "mb": 8.2619,
-        "gb": 0.008068,
-        "primary": "8.26 MB",
-        "detail": "8,663,206 B · 8460.2 KB · 8.26 MB"
+        "bytes": 4241406,
+        "kb": 4141.998,
+        "mb": 4.0449,
+        "gb": 0.00395,
+        "primary": "4.04 MB",
+        "detail": "4,241,406 B · 4142 KB · 4.04 MB"
       }
     },
     "esm": {
       "bytes": 200,
-      "buildMs": 4,
+      "buildMs": 5,
       "markersUsedPresent": 1,
       "markersUnusedRetained": 0,
-      "markersUnusedTotal": 39,
+      "markersUnusedTotal": 19,
       "size": {
         "bytes": 200,
         "kb": 0.195,
@@ -41,15 +48,19 @@
   },
   "benefit": {
     "bytesSavedPct": 100,
-    "bytesSaved": 8663006,
+    "bytesSaved": 4241206,
     "sizeSaved": {
-      "bytes": 8663006,
-      "kb": 8459.967,
-      "mb": 8.2617,
-      "gb": 0.008068,
-      "primary": "8.26 MB",
-      "detail": "8,663,006 B · 8460 KB · 8.26 MB"
+      "bytes": 4241206,
+      "kb": 4141.803,
+      "mb": 4.0447,
+      "gb": 0.00395,
+      "primary": "4.04 MB",
+      "detail": "4,241,206 B · 4141.8 KB · 4.04 MB"
     },
-    "unusedMarkersDelta": 3900
+    "unusedMarkersDelta": 1900,
+    "esmOfSingletonPct": 0,
+    "singletonVsEsmFactor": 21207,
+    "callSiteCoveragePct": 0.05,
+    "unusedRemovedPct": 100
   }
 }

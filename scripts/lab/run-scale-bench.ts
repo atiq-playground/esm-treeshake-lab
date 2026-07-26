@@ -421,7 +421,7 @@ ${report.note}
 
 ## Why this matters
 
-Paying only for call sites keeps Worker/edge cold starts and deploy artifacts small. A GraphQL (or similar) façade that *could* reach all ${n} packages still only needs the resolvers it wires: with ESM that is ~${callSites} imports; a singleton registry that side-effect-imports all ${n} still ships the full surface even when only ${callSiteCoveragePct}% of functions are invoked.
+A singleton registry does not just import all ${n} packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~${callSites} call sites (${callSiteCoveragePct}% of the surface). Brutal when many consumers share the registry, or GraphQL sits on ${n}+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.
 
 ## Commands
 

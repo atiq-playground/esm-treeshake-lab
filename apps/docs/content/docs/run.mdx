@@ -5,7 +5,7 @@ description: "CLI commands. No in-browser spawn."
 
 Copy-paste from the repo root. The docs site does **not** run the bench.
 
-Home metrics and CI always use **UC1 baseline** (`benchmark-latest.*`).
+Home chart compares **UC1–UC4** from `docs/lab/benchmark-*-latest.json`. CI smoke still writes **UC1 baseline** (`benchmark-latest.*`).
 
 **Call sites:** UC1–UC3 ESM calls **1** function (`used` on svc-0). `--fns` only changes how much *unused* surface exists to shake. UC4 (`partial`) is the case where ESM (and singleton) call **`--used=K`** functions.
 
@@ -57,3 +57,7 @@ bun run lab:bench:partial -- --n=100 --used=50 --seed=42
 | `docs/lab/benchmark-wide-latest.*` | UC2 |
 | `docs/lab/benchmark-cycles-latest.*` | UC3 |
 | `docs/lab/benchmark-partial-latest.*` | UC4 |
+
+## Support
+
+If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.

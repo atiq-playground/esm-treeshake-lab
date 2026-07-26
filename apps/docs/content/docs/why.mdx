@@ -1,11 +1,31 @@
 ---
 title: Why ESM wins
-description: Singleton registry vs selective ESM imports
+description: Registry pulls every function; ESM only pays for call sites
 ---
 
-## The two arms
+## In one breath
 
-**Singleton:** each service module registers itself on import (`registerPublicService`). A plugins index imports **all N** packages, then `registerPublicServices(cfg)` configures whatever is in the registry. Even if the app only **calls** a few `used()` methods, the bundle still paid for every imported plugin (and typically keeps unused class methods / ballast).
+**Singleton registry:** import the plugins index → every package loads → every function in those packages is in the graph. Cycles pull neighbors too. Bundlers cannot shake it: the side-effect import made it all “live.”
+
+**ESM:** import the functions you call. Everything else stays out.
+
+Same API surface either way. Different bill.
+
+## Why that bill hurts
+
+| Pressure | What happens |
+|----------|----------------|
+| Depth | Not “N plugins”: N packages × every export / method / ballast inside |
+| Cycles | One import can drag a ring of packages you never call |
+| No DCE | Side-effect registration defeats tree-shaking; unused code stays |
+| Many consumers | Each app that touches the registry pays the full graph again |
+| Façades (GraphQL, etc.) | Schema *could* reach 100+ packages; you still only wire some resolvers. Registry ships all of them anyway |
+
+Cold start, isolate size, and deploy bytes follow the module graph, not the resolvers you actually registered.
+
+## The two arms (this lab)
+
+**Singleton:** each service registers on import (`registerPublicService`). A plugins index imports **all N** packages, then `registerPublicServices(cfg)` configures the registry. Even if the app only **calls** a few `used()` methods, you already paid for every plugin’s full surface.
 
 **ESM:** import only what you call. Unused packages and unused exports stay out of the graph and are shaken away.
 
@@ -24,11 +44,9 @@ So if someone “only needed 8 functions,” run:
 bun run lab:bench:partial -- --n=100 --fns=40 --used=8
 ```
 
-Same 8 call sites on both arms; singleton still registers all 100 packages.
+Same 8 call sites on both arms; singleton still registers all 100 packages (and keeps their unused exports).
 
-## Why the improvement is good (in general)
-
-Smaller bundles mean less to download, parse, and retain in memory: especially on Workers / edge where cold start and isolate size matter. Tree-shaking unused exports is how you keep a large *library* surface without forcing every consumer to pay for it.
+## What the numbers mean
 
 Reports compare percentages, not only raw bytes:
 
@@ -38,19 +56,23 @@ Reports compare percentages, not only raw bytes:
 - **Call-site coverage**: how much of the defined surface you actually invoke
 - **Unused markers removed**: ballast / dead exports dropped
 
-## GraphQL (or any façade) over 100 packages
+## GraphQL over 100 packages
 
-Imagine a GraphQL service that *can* reach all 100 domain packages (schema stitching, a mega-`resolvers` map, or a plugin registry). At runtime a given deployment or request path might only need **some** of those functions: say half the packages’ entrypoints, or eight mutations.
+A GraphQL service that *can* reach all 100 domain packages (stitching, a mega-`resolvers` map, or a plugin registry) often only needs **some** of those functions at deploy time.
 
 | Packaging | What gets into the Worker bundle |
 |-----------|----------------------------------|
-| Singleton registry | Side-effect import of all 100 packages → you ship unused methods and ballast even if GraphQL only wires 50 resolvers |
-| ESM selective imports | Import only the resolver implementations you register → pay for those call sites; the other packages/exports stay out |
+| Singleton registry | Side-effect import of all 100 → every function in each package stays; unused resolvers still ship |
+| ESM selective imports | Import only the resolver implementations you register → pay for those call sites |
 
 UC4 (`lab:bench:partial`) is that story: **same K call sites on both arms**, full N still registered on the singleton side. The % saved is the cost of “import everything so GraphQL *could* use it” versus “import what the schema actually binds.”
 
-That does **not** mean GraphQL cannot expose a large schema: it means the **module graph** should follow the resolvers you ship, not a global registry of every package.
+Large schemas are fine. A global registry of every package is not how the **module graph** should look.
 
 ## What we measure
 
 esbuild bundles both fixtures and reports **bytes**, **unused markers retained**, **build wall time**, and the percentage comparison table above. Home metrics stay on UC1 (`docs/lab/benchmark-latest.*`); variants write sibling reports.
+
+## Support
+
+If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.

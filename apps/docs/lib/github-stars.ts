@@ -1,3 +1,7 @@
+import { formatStars } from "./format-stars";
+
+export { formatStars };
+
 const REPO_API =
   "https://api.github.com/repos/atiq-playground/esm-treeshake-lab";
 
@@ -19,13 +23,4 @@ export async function fetchRepoStars(): Promise<number | null> {
   } catch {
     return null;
   }
-}
-
-export function formatStars(n: number): string {
-  if (n >= 1000) {
-    const k = n / 1000;
-    const s = k >= 10 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/, "");
-    return `${s}k`;
-  }
-  return String(n);
 }
