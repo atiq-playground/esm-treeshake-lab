@@ -1,0 +1,30 @@
+# Release Pipeline (CRITICAL)
+
+After work is **merged to `main`**, cut a release. Do **not** only create a
+GitHub tag — version files and README must match.
+
+## Semver (this repo)
+
+Bump the **root** `package.json` and `apps/web/package.json` together.
+Leave workspace packages at `0.0.0` unless releasing them independently.
+
+| Change since last release | Bump | Example |
+|---------------------------|------|---------|
+| Breaking API / data model | MINOR while `0.x` (MAJOR at `1.0.0`) | `0.2.0` → `0.3.0` |
+| New user-facing feature | MINOR | `0.1.0` → `0.2.0` |
+| Fix / docs / chore only | PATCH | `0.2.0` → `0.2.1` |
+
+Tag format: `vX.Y.Z` (leading `v`). Never reuse or force-move a published tag.
+
+## Checklist (every release)
+
+1. **Branch** — `git checkout main && git pull`, then
+   `git checkout -b release/vX.Y.Z`.
+2. **Version** — set `"version": "X.Y.Z"` in root + `apps/web` `package.json`.
+3. **README** — progress / release links point at **`vX.Y.Z`** (not a stale tag).
+4. **PR → merge** — open PR from `release/vX.Y.Z` → `main`, wait for CI, merge.
+5. **GitHub release** — on the merge commit:
+   `gh release create vX.Y.Z --target <merge-sha> --title "vX.Y.Z" --notes "…"`.
+
+Incomplete (tag-only, no version/README bump) is a failed release — fix with the
+next correct semver bump, do not rewrite history.

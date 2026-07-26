@@ -65,6 +65,13 @@ merges to `main` once green, which deploys a preview. Run
 [`setup-skills`](.cursor/skills/setup-skills/SKILL.md) once to wire up the
 issue tracker, triage labels, and domain docs this loop depends on.
 
+## Releases
+
+After every merge to `main`, run the full release pipeline (semver bump,
+release branch, README, GitHub tag/release) — see
+[`.cursor/rules/common/release.mdc`](.cursor/rules/common/release.mdc)
+(mirrored under `.claude/rules/common/release.md`).
+
 ## Framework Conventions
 
 Framework-specific structure and conventions for next live in
