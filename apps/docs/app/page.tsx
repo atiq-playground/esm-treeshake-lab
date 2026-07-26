@@ -72,10 +72,13 @@ export default async function HomePage() {
         </div>
 
         <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <p className="lab-label">How heavy is the Worker / deploy artifact</p>
-            <p className="lab-mono text-[length:var(--caption)] text-[color:var(--text-secondary)]">
-              Linear KB. Tiny greens get a stub so you can see them — label is the real size.
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-6">
+            <p className="lab-label sm:shrink-0">
+              How heavy is the Worker / deploy artifact
+            </p>
+            <p className="lab-mono min-w-0 flex-1 text-[length:var(--caption)] text-[color:var(--text-secondary)] sm:text-right">
+              Linear KB. Tiny greens get a stub so you can see them — label is
+              the real size.
             </p>
           </div>
           <UseCaseComparisonChart rows={comparison.rows} />
