@@ -7,6 +7,7 @@ vi.mock("@/lib/auth/auth-provider", () => ({
     isLoading: false,
     login: vi.fn(),
     logout: vi.fn(),
+    clearSessions: vi.fn(),
   }),
 }));
 

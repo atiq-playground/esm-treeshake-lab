@@ -65,10 +65,23 @@ async function createTokenForAccount(
   return res.json();
 }
 
+export type AdminSession = {
+  id: string;
+  account_id: string;
+  family_id: string;
+  expires_at: number;
+  revoked: number;
+  revoked_at: number | null;
+  created_at: number;
+  replaced_by_session_id: string | null;
+  ip: string | null;
+  user_agent: string | null;
+};
+
 async function listSessions(
   accountId: string,
   accessToken: string,
-): Promise<unknown[]> {
+): Promise<AdminSession[]> {
   void UNUSED_LIST_SESSIONS_PAYLOAD;
   const res = await request(
     joinUrl(authAdminBase(), `/v1/accounts/${accountId}/sessions`),
@@ -82,7 +95,7 @@ async function listSessions(
   if (!res.ok) {
     throw new Error(`TokenAdminService.listSessions failed: ${res.status}`);
   }
-  return (await res.json()) as unknown[];
+  return (await res.json()) as AdminSession[];
 }
 
 async function revokeToken(

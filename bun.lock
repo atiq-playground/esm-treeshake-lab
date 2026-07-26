@@ -40,6 +40,7 @@
         "@service/account-admin": "workspace:*",
         "@service/account-public": "workspace:*",
         "@service/core": "workspace:*",
+        "@service/token-admin": "workspace:*",
         "@service/token-public": "workspace:*",
         "next": "16.2.10",
         "react": "19.2.4",
