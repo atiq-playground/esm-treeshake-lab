@@ -1,45 +1,45 @@
 # Scale bench wide
 
-- **When:** 2026-07-26T15:28:01.349Z
+- **When:** 2026-07-26T15:48:25.151Z
 - **Case:** wide
 - **N:** 100
 - **Fns/svc:** 20
 - **Surface:** 2000 functions (100 × 20)
-- **Call sites (both arms):** 1: ESM imports only `used` from svc-0
+- **Call sites (both arms):** 300: packages [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]
 - **Cycles:** false
 - **Host:** esbuild
 - **Mode:** generated
 
-ESM call sites: 1 (import { used } from svc-0 only). Surface still 2000 fns across 100 packages; --fns only grows what can be shaken, not what ESM calls.
+App binds 300 of 2000 surface functions across 100 packages. Both arms call the same 300 sites; singleton still registers all 100 packages.
 
 ## Results
 
 | Arm | Size | Build (ms) | Used markers | Unused retained |
 |-----|------|----------:|-------------:|----------------:|
-| Singleton | 4,241,406 B · 4142 KB · 4.04 MB | 69 | 100 | 1900 |
-| ESM | 200 B | 5 | 1 | 0 |
+| Singleton | 4,251,131 B · 4151.5 KB · 4.05 MB | 82 | 100 | 1900 |
+| ESM | 459,451 B · 448.7 KB · 0.44 MB | 35 | 100 | 200 |
 
 ## Benefit (percentage comparison)
 
 | Metric | Value |
 |--------|------:|
-| Bytes saved vs singleton | 100% |
-| Absolute saved | 4,241,206 B · 4141.8 KB · 4.04 MB |
-| ESM as % of singleton | 0% |
-| Singleton / ESM size | 21207× |
-| Call-site coverage of surface | 0.05% (1/2000) |
-| Unused markers removed | 100% (Δ 1900) |
+| Bytes saved vs singleton | 89.2% |
+| Absolute saved | 3,791,680 B · 3702.8 KB · 3.62 MB |
+| ESM as % of singleton | 10.81% |
+| Singleton / ESM size | 9.3× |
+| Call-site coverage of surface | 15% (300/2000) |
+| Unused markers removed | 89.5% (Δ 1700) |
 
 ## Why this matters
 
-A singleton registry does not just import all 100 packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~1 call sites (0.05% of the surface). Brutal when many consumers share the registry, or GraphQL sits on 100+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.
+A singleton registry does not just import all 100 packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~300 call sites (15% of the surface). Brutal when many consumers share the registry, or GraphQL sits on 100+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.
 
 ## Commands
 
 ```bash
 bun run lab:bench:smoke
-bun run lab:bench -- --n=100
-bun run lab:bench:wide -- --n=100
-bun run lab:bench:cycles -- --n=100
-bun run lab:bench:partial -- --n=100 --used=8
+bun run lab:bench -- --n=100 --used=20
+bun run lab:bench:wide -- --n=100 --used=20
+bun run lab:bench:cycles -- --n=100 --used=20
+bun run lab:bench:partial -- --n=100 --used=200
 ```

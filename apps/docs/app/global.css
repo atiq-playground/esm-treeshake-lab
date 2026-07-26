@@ -59,6 +59,36 @@ body {
   color: var(--text-display);
 }
 
+/* Range hero: space + contrast so min–max reads as two values */
+.lab-hero-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  letter-spacing: 0;
+  gap: 0;
+}
+
+.lab-hero-range-min {
+  color: var(--text-secondary);
+}
+
+.lab-hero-range-sep {
+  margin: 0 0.28em;
+  color: var(--text-disabled);
+  font-weight: 300;
+}
+
+.lab-hero-range-max {
+  color: var(--success);
+}
+
+.lab-hero-unit {
+  margin-left: 0.14em;
+  font-size: 0.55em;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
 .lab-label {
   font-family: var(--font-mono);
   font-size: var(--label);

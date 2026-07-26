@@ -10,36 +10,72 @@ import { SITE_LINKS, withUtm } from "@/lib/site-links";
 export default async function HomePage() {
   const comparison = loadUseCaseComparison();
   const { min, max } = comparison.savedPctRange;
-  const savedRange = min === max ? `${min}%` : `${min}–${max}%`;
   const peak = comparison.largestSave;
+  const isRange = min !== max;
 
   return (
     <HomeLayout {...baseOptions()}>
       <main className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6 py-16">
         <header className="flex flex-col gap-3">
-          <p className="lab-label">How much smaller</p>
-          <p className="lab-hero-number">{savedRange}</p>
+          <p className="lab-label">GraphQL service bundle</p>
+          <p
+            className={
+              isRange ? "lab-hero-number lab-hero-range" : "lab-hero-number"
+            }
+            aria-label={
+              isRange
+                ? `Saved between ${min} and ${max} percent`
+                : `Saved ${min} percent`
+            }
+          >
+            {isRange ? (
+              <>
+                <span className="lab-hero-range-min">{min}</span>
+                <span className="lab-hero-range-sep" aria-hidden="true">
+                  –
+                </span>
+                <span className="lab-hero-range-max">{max}</span>
+                <span className="lab-hero-unit">%</span>
+              </>
+            ) : (
+              <>
+                {min}
+                <span className="lab-hero-unit">%</span>
+              </>
+            )}
+          </p>
           <p className="lab-mono text-sm text-[color:var(--text-primary)]">
             Biggest win: dropped {peak.sizeSavedPrimary} (
             {peak.plainTitle.toLowerCase()})
           </p>
           <p className="text-[length:var(--body)] text-[color:var(--text-secondary)]">
-            Four real tests. Same story each time: less junk shipped.
+            Same schema, same resolvers you actually bind — different packaging.
           </p>
         </header>
 
-        <p className="max-w-xl text-[length:var(--body)] leading-relaxed text-[color:var(--text-primary)]">
-          Imagine a backpack full of tools. One style always packs the whole
-          bag — even tools you never touch. The other packs only the tool you
-          ask for. The green bars are the light bag. See{" "}
-          <Link href="/docs/why">Why</Link>.
-        </p>
+        <div className="flex max-w-xl flex-col gap-3 text-[length:var(--body)] leading-relaxed text-[color:var(--text-primary)]">
+          <p>
+            Picture a GraphQL service whose resolver map{" "}
+            <em>can</em> reach ~100 first-party domain packages — not “I
+            installed 100 random npm libs,” but a real domain surface the schema
+            might touch. One style side-effect-imports every package (plugin /
+            singleton registry). The other imports only the resolvers you bind.
+            Green bars are selective ESM. See{" "}
+            <Link href="/docs/why">Why</Link>.
+          </p>
+          <p className="text-[length:var(--caption)] text-[color:var(--text-secondary)]">
+            Stub packages only. We do <strong>not</strong> include{" "}
+            <code className="lab-mono text-xs">graphql</code>, DataLoader, ORMs,
+            auth SDKs, or other third-party deps — those can grow the bundle far
+            more. The gap here is the first-party module graph alone.
+          </p>
+        </div>
 
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <p className="lab-label">How heavy is the download</p>
+            <p className="lab-label">How heavy is the Worker / deploy artifact</p>
             <p className="lab-mono text-[length:var(--caption)] text-[color:var(--text-secondary)]">
-              Taller bar = bigger file
+              Linear KB. Tiny greens get a stub so you can see them — label is the real size.
             </p>
           </div>
           <UseCaseComparisonChart rows={comparison.rows} />
@@ -51,7 +87,7 @@ export default async function HomePage() {
               >
                 <div className="flex flex-col gap-1">
                   <span className="lab-label">{row.plainTitle}</span>
-                  <span className="max-w-xs text-[length:var(--caption)] text-[color:var(--text-secondary)]">
+                  <span className="max-w-md text-[length:var(--caption)] text-[color:var(--text-secondary)]">
                     {row.plainBlurb}
                   </span>
                 </div>
@@ -76,9 +112,9 @@ export default async function HomePage() {
               <code className="lab-mono text-sm">bun run lab:bench:smoke</code>
             </li>
             <li>
-              Bigger run:{" "}
+              Landing-shaped run (~3 resolvers/package):{" "}
               <code className="lab-mono text-sm">
-                bun run lab:bench -- --n=100
+                bun run lab:bench:wide -- --n=100 --used=300
               </code>
             </li>
             <li>

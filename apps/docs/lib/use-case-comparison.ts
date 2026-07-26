@@ -17,37 +17,46 @@ export type UseCaseMeta = {
   axisLabel: string;
 };
 
+/**
+ * Landing copy: GraphQL service that can reach N domain packages.
+ * Typical bind is ~2–5 resolvers (functions) per package; singleton still
+ * ships the rest of each package’s surface (~20 fns in fat cases).
+ */
 export const USE_CASE_ORDER: readonly UseCaseMeta[] = [
   {
     id: "baseline",
     uc: "UC1",
     name: "Baseline",
-    plainTitle: "Tiny demo",
-    plainBlurb: "Small kit. App only needs one tool.",
-    axisLabel: "Tiny",
+    plainTitle: "Lean domain modules",
+    plainBlurb:
+      "100 packages, thin surface (~2 fns each). Schema still binds ~2 resolvers per package.",
+    axisLabel: "Lean",
   },
   {
     id: "wide",
     uc: "UC2",
     name: "Wide",
-    plainTitle: "Huge unused kit",
-    plainBlurb: "Each package has lots of tools. App still needs only one.",
-    axisLabel: "Huge",
+    plainTitle: "Fat domain modules",
+    plainBlurb:
+      "100 packages × ~20 exports each. Schema binds ~3 resolvers/package; registry ships the other ~17.",
+    axisLabel: "Fat",
   },
   {
     id: "cycles",
     uc: "UC3",
     name: "Cycles",
-    plainTitle: "Tangled packages",
-    plainBlurb: "Packages hold hands in a circle, so friends get dragged in.",
-    axisLabel: "Tangled",
+    plainTitle: "Cyclic domain graph",
+    plainBlurb:
+      "Same ~3 resolvers/package, but packages ring-link — the cycle can drag neighbors you never call.",
+    axisLabel: "Cyclic",
   },
   {
     id: "partial",
     uc: "UC4",
     name: "Partial",
-    plainTitle: "Need many tools",
-    plainBlurb: "App uses many tools — but still not the whole kit.",
+    plainTitle: "Many resolvers",
+    plainBlurb:
+      "Heavier schema: ~5 resolvers per package. Still far from the full ~20-fn surface each package defines.",
     axisLabel: "Many",
   },
 ] as const;
@@ -103,14 +112,24 @@ function resolveCaseId(
   return fallback;
 }
 
+function perPackageResolvers(report: BenchmarkReport): number | null {
+  const used = report.callSites;
+  if (used == null || report.n <= 0) return null;
+  return Number((used / report.n).toFixed(1));
+}
+
 function plainMeta(report: BenchmarkReport): string {
-  const parts = [`${report.n} packages`];
-  if (report.callSites != null) {
+  const parts = [`${report.n} domain packages`];
+  const perPkg = perPackageResolvers(report);
+  if (report.callSites != null && perPkg != null) {
     parts.push(
       report.callSites === 1
-        ? "uses 1 tool"
-        : `uses ${report.callSites} tools`,
+        ? "1 resolver total"
+        : `~${perPkg} resolvers/pkg (${report.callSites} total)`,
     );
+  }
+  if (report.cycles) {
+    parts.push("cyclic graph");
   }
   return parts.join(" · ");
 }
@@ -119,21 +138,40 @@ function plainCopy(
   meta: UseCaseMeta,
   report: BenchmarkReport,
 ): { plainTitle: string; plainBlurb: string } {
-  if (meta.id === "partial" && report.callSites != null) {
-    const used = report.callSites;
-    const surface = report.surfaceFns;
-    const title = used === 1 ? "Need 1 tool" : `Need ${used} tools`;
+  const used = report.callSites ?? 1;
+  const surface = report.surfaceFns;
+  const n = report.n;
+  const perPkg = perPackageResolvers(report) ?? used / Math.max(n, 1);
+  const fns = report.fns ?? 2;
+
+  if (meta.id === "partial") {
+    const title =
+      used === 1 ? "Wires 1 resolver" : `Wires ${used} resolvers`;
     const blurb =
       surface != null
-        ? `App uses ${used} of ${surface.toLocaleString("en-US")} tools — still not the whole kit.`
-        : `App uses ${used} tools — still not the whole kit.`;
+        ? `~${perPkg} resolvers/package (1 fn ≈ 1 field). Binds ${used} of ${surface.toLocaleString("en-US")} surface fns — registry still ships ~${fns}/package.`
+        : `~${perPkg} resolvers/package across ${n} packages — still not the whole registry.`;
     return { plainTitle: title, plainBlurb: blurb };
   }
 
-  if (meta.id === "baseline" && (report.callSites ?? 1) === 1) {
+  if (meta.id === "baseline") {
     return {
       plainTitle: meta.plainTitle,
-      plainBlurb: `Small kit (${report.n} packages). App only needs 1 tool.`,
+      plainBlurb: `${n} lean packages (~${fns} fns each). Schema binds ~${perPkg} resolvers/package (${used} total); registry still side-effect-imports all ${n}.`,
+    };
+  }
+
+  if (meta.id === "wide") {
+    return {
+      plainTitle: meta.plainTitle,
+      plainBlurb: `${n} fat packages (~${fns} exports each). Schema binds ~${perPkg}/package; singleton still ships the other ~${Math.max(0, fns - perPkg)} unused exports per package.`,
+    };
+  }
+
+  if (meta.id === "cycles") {
+    return {
+      plainTitle: meta.plainTitle,
+      plainBlurb: `Same ~${perPkg} resolvers/package (${used} total), but packages ring-link — the cycle can drag neighbors you never call into ESM too.`,
     };
   }
 

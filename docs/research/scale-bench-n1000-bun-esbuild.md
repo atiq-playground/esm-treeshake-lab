@@ -18,7 +18,7 @@ In-repo lab harness (not ephemeral `/tmp` workspaces):
 3. Bundle each use-case entry with esbuild (`--bundle --format=esm`), measuring wall time, bytes, and unused markers.
 4. Sweep driver: `bun run scripts/lab/probe-scale-practicality.ts` (restores `docs/lab/benchmark-*-latest.*` at N=100 afterward).
 
-**Use cases**
+**Use cases (this N-ladder sweep)**
 
 | Case | Surface | Graph | Call sites (both arms) |
 |------|---------|-------|------------------------|
@@ -26,6 +26,21 @@ In-repo lab harness (not ephemeral `/tmp` workspaces):
 | **wide** (UC2) | 20 fns/svc | no cycles | 1 |
 | **partial** (UC4) | 20 fns/svc | no cycles | `min(8, N)` (fixed K for scale story) |
 | **cycles** (UC3) | 20 fns/svc | ring import across all N | 1 call, but ring pulls N modules into ESM |
+
+This sweep answers **“how far can N go?”** with a thin call-site model (mostly K=1). It is **not** the landing-page story.
+
+### Landing-shaped benches (separate from this sweep)
+
+Docs home / README measure a **GraphQL-like** service that can reach **N ≈ 100 first-party domain packages**, binding **~2–5 resolvers per package** (1 function ≈ 1 field resolver). Both arms call the same K; singleton still registers all N.
+
+| Landing case | Command (N=100) | Surface | K (`--used`) |
+|--------------|-----------------|---------|--------------|
+| Lean (UC1) | `lab:bench -- --n=100 --used=200` | 2 fns/svc | 200 (~2/pkg) |
+| Fat (UC2) | `lab:bench:wide -- --n=100 --used=300` | 20 fns/svc | 300 (~3/pkg) |
+| Cyclic (UC3) | `lab:bench:cycles -- --n=100 --used=300` | 20 + ring | 300 (~3/pkg) |
+| Many (UC4) | `lab:bench:partial -- --n=100 --used=500` | 20 fns/svc | 500 (~5/pkg) |
+
+Artifacts: `docs/lab/benchmark-*-latest.*`. CI smoke stays UC1 N=3 with K=1. Re-running `lab:probe:scale` restores N=100 **sweep-shaped** (K=1 / K=min(8,N)) latest files unless you re-apply the landing `--used=` commands afterward.
 
 Hardware: local WSL2 / Bun 1.3.14 (dev laptop). Numbers are order-of-magnitude, not CI SLOs. Sweep timestamp: `2026-07-26T15:27:58.959Z`.
 
@@ -121,3 +136,5 @@ bun run scripts/lab/probe-scale-practicality.ts --n=3,100,1000
 ## Answer
 
 **N=1000 remains practical** for all four use cases under the esbuild harness when generated packages are not Bun/Nx project targets. **N=100** stays the documented default. **N=2000–5000** are usable optional stress points; **N=10000** works but is disk- and (for cycles) wall-time heavy—treat as an extreme probe, not a day-to-day flag. The binding constraints are **singleton bundle size**, **generated tree disk**, and **cycles ESM/singleton wall time**, not `bun install` in the current resolution-only layout.
+
+For product messaging, prefer the **landing-shaped** N=100 / `--used≈2–5 per package` benches (honest GraphQL bind density). Use this N-ladder for **harness practicality**, not as the headline “% saved” story.

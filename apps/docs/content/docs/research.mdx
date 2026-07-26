@@ -7,6 +7,8 @@ description: Notes behind the lab
 
 [docs/research/scale-bench-n1000-bun-esbuild.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/scale-bench-n1000-bun-esbuild.md): Bun + esbuild practicality for N ∈ {3, 100, 1000, 2000, 5000, 10000} across UC1–UC4; raw rows in [scale-bench-sweep.json](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/scale-bench-sweep.json). Avoid Nx targets on generated packages.
 
+That sweep uses a **thin call-site model** (mostly K=1). The docs **home** chart uses a separate **GraphQL-shaped** N=100 story: bind ~2–5 resolvers per domain package (`--used=200|300|500`). See [Run](/docs/run) and the “Landing-shaped benches” section in the research note.
+
 ## Next + tsc namespaces
 
 [docs/research/next-tsc-namespace-treeshaking.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/next-tsc-namespace-treeshaking.md) and [ADR 0001](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/adr/0001-namespace-shaped-const-over-export-namespace.md): why namespace-shaped `export const` beats TypeScript `export namespace` for member shake-out under Next.

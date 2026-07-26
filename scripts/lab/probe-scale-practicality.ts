@@ -363,15 +363,21 @@ console.log(`\nWrote ${RESEARCH_JSON} (${rows.length} rows)`);
 // Restore documented default local artifacts at N=100 so docs home stays coherent.
 console.log("\n=== restoring docs/lab latest reports at N=100 ===");
 for (const args of [
-  ["run", "scripts/lab/run-scale-bench.ts", "--n=100"],
-  ["run", "scripts/lab/run-scale-bench.ts", "--case=wide", "--n=100"],
-  ["run", "scripts/lab/run-scale-bench.ts", "--case=cycles", "--n=100"],
+  ["run", "scripts/lab/run-scale-bench.ts", "--n=100", "--used=200"],
+  ["run", "scripts/lab/run-scale-bench.ts", "--case=wide", "--n=100", "--used=300"],
+  [
+    "run",
+    "scripts/lab/run-scale-bench.ts",
+    "--case=cycles",
+    "--n=100",
+    "--used=300",
+  ],
   [
     "run",
     "scripts/lab/run-scale-bench.ts",
     "--case=partial",
     "--n=100",
-    "--used=8",
+    "--used=500",
   ],
 ]) {
   const r = spawnSync("bun", args, { cwd: ROOT, stdio: "inherit" });

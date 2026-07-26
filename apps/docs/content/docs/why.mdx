@@ -31,20 +31,21 @@ Cold start, isolate size, and deploy bytes follow the module graph, not the reso
 
 ## Call sites (important)
 
-`--fns` is the **surface** per package (how many functions each stub *defines*). It is **not** how many ESM imports by default.
+`--fns` is the **surface** per package (how many functions each stub *defines*). `--used=K` is how many resolvers the schema **binds** (same K on both arms).
 
-| Case | Surface | What ESM actually calls |
-|------|---------|-------------------------|
-| UC1 baseline / UC2 wide / UC3 cycles | `N × fns` | **1**: `used` from svc-0 only |
-| UC4 partial | `N × fns` | **`--used=K`** (default `⌊N/2⌋`): `used` on K packages; both arms call the same K |
-
-So if someone “only needed 8 functions,” run:
+| Case | Surface | What both arms call |
+|------|---------|---------------------|
+| UC1–UC3 (lab default) | `N × fns` | **1** unless you pass `--used=K` |
+| Landing lean | `N × 2` | **`--used=200`** (~2/pkg) |
+| Landing fat / cycles | `N × 20` | **`--used=300`** (~3/pkg) |
+| Landing many | `N × 20` | **`--used=500`** (~5/pkg) |
 
 ```bash
-bun run lab:bench:partial -- --n=100 --fns=40 --used=8
+bun run lab:bench:wide -- --n=100 --used=300
+bun run lab:bench:partial -- --n=100 --used=500
 ```
 
-Same 8 call sites on both arms; singleton still registers all 100 packages (and keeps their unused exports).
+Same K call sites on both arms; singleton still registers all 100 packages (and keeps their unused exports).
 
 ## What the numbers mean
 
@@ -56,18 +57,22 @@ Reports compare percentages, not only raw bytes:
 - **Call-site coverage**: how much of the defined surface you actually invoke
 - **Unused markers removed**: ballast / dead exports dropped
 
-## GraphQL over 100 packages
+## GraphQL over 100 domain packages
 
-A GraphQL service that *can* reach all 100 domain packages (stitching, a mega-`resolvers` map, or a plugin registry) often only needs **some** of those functions at deploy time.
+This is **not** “do you have 100 random npm dependencies?” It is a GraphQL (or similar) service whose resolver map *can* reach ~100 **first-party domain packages** — stitching, a mega-`resolvers` map, or a plugin registry.
+
+**1 function ≈ 1 field resolver.** If you import 100 domain packages, you typically bind **~2–5 resolvers per package** (not 20 total). Each package may still *define* ~20 exports; the singleton registry ships those unused ones, ESM does not.
 
 | Packaging | What gets into the Worker bundle |
 |-----------|----------------------------------|
-| Singleton registry | Side-effect import of all 100 → every function in each package stays; unused resolvers still ship |
-| ESM selective imports | Import only the resolver implementations you register → pay for those call sites |
+| Singleton registry | Side-effect import of all 100 → every function in each package stays; unused exports still ship |
+| ESM selective imports | Import only the resolver implementations you register → pay for ~2–5 fns/package |
 
-UC4 (`lab:bench:partial`) is that story: **same K call sites on both arms**, full N still registered on the singleton side. The % saved is the cost of “import everything so GraphQL *could* use it” versus “import what the schema actually binds.”
+Landing benches: **~2/pkg** (lean), **~3/pkg** (fat/cycles), **~5/pkg** (many) — same K on both arms; singleton still registers all N.
 
-Large schemas are fine. A global registry of every package is not how the **module graph** should look.
+**Out of scope (important):** these stubs do **not** include `graphql`, DataLoader, ORMs, auth SDKs, or other third-party deps. Real services pull those too; they can grow the bundle far more. The numbers isolate the **first-party module graph** cost of “import everything so GraphQL *could* use it” versus “import what the schema actually binds.”
+
+Large schemas are fine. A global registry of every domain package is not how the **module graph** should look.
 
 ## What we measure
 

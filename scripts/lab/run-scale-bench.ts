@@ -2,10 +2,10 @@
  * Scale bench: esbuild singleton vs ESM, write report artifacts.
  *
  *   bun run scripts/lab/run-scale-bench.ts --smoke
- *   bun run scripts/lab/run-scale-bench.ts --n=100
- *   bun run scripts/lab/run-scale-bench.ts --case=wide --n=100
- *   bun run scripts/lab/run-scale-bench.ts --case=cycles --n=100
- *   bun run scripts/lab/run-scale-bench.ts --case=partial --n=100 --used=8
+ *   bun run scripts/lab/run-scale-bench.ts --n=100 --used=200
+ *   bun run scripts/lab/run-scale-bench.ts --case=wide --n=100 --used=300
+ *   bun run scripts/lab/run-scale-bench.ts --case=cycles --n=100 --used=300
+ *   bun run scripts/lab/run-scale-bench.ts --case=partial --n=100 --used=500
  */
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -64,17 +64,23 @@ if (!Number.isFinite(fns) || fns < 2 || fns > 200) {
   process.exit(2);
 }
 
-/** How many `used()` call sites the app exercises (same on both arms). */
+const surfaceFns = n * fns;
+
+/** How many surface functions the app binds (same on both arms). May exceed N. */
 let callSites: number;
-if (benchCase === "partial") {
-  callSites = Number(usedFlag ?? Math.max(1, Math.floor(n / 2)));
+if (usedFlag != null) {
+  callSites = Number(usedFlag);
+} else if (benchCase === "partial") {
+  callSites = Math.max(1, Math.floor(n / 2));
 } else {
   callSites = 1;
 }
-if (!Number.isFinite(callSites) || callSites < 1 || callSites > n) {
-  console.error(`Invalid --used (1..${n})`);
+if (!Number.isFinite(callSites) || callSites < 1 || callSites > surfaceFns) {
+  console.error(`Invalid --used (1..${surfaceFns} surface fns)`);
   process.exit(2);
 }
+/** Multi-import fixtures whenever the app binds more than svc-0.used. */
+const multiCall = callSites > 1 || benchCase === "partial";
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -87,18 +93,49 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Pick `k` package indices in 0..n-1. Sequential unless --seed= is set. */
-function pickUsedPackages(total: number, k: number, seed: number | null): number[] {
-  const all = Array.from({ length: total }, (_, i) => i);
-  if (seed == null) return all.slice(0, k);
-  const rand = mulberry32(seed);
-  for (let i = all.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    const tmp = all[i]!;
-    all[i] = all[j]!;
-    all[j] = tmp;
+type BoundSite =
+  | { pkg: number; kind: "used"; name: string }
+  | { pkg: number; kind: "unused"; name: string; unusedIndex: number };
+
+function fnNameForSlot(slot: number, totalFns: number): string {
+  if (slot === 0) return "used";
+  if (totalFns === 2) return "unused";
+  return `unused_${slot}`;
+}
+
+/** Bind K surface fns: fill `used` across packages, then unused_1, … (optional shuffle). */
+function pickBoundSites(
+  total: number,
+  totalFns: number,
+  k: number,
+  seed: number | null,
+): BoundSite[] {
+  const surface: BoundSite[] = [];
+  for (let slot = 0; slot < totalFns; slot++) {
+    for (let pkg = 0; pkg < total; pkg++) {
+      const name = fnNameForSlot(slot, totalFns);
+      if (slot === 0) surface.push({ pkg, kind: "used", name });
+      else surface.push({ pkg, kind: "unused", name, unusedIndex: slot });
+    }
   }
-  return all.slice(0, k).sort((a, b) => a - b);
+  if (seed != null) {
+    const rand = mulberry32(seed);
+    for (let i = surface.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      const tmp = surface[i]!;
+      surface[i] = surface[j]!;
+      surface[j] = tmp;
+    }
+  }
+  return surface.slice(0, k).sort((a, b) =>
+    a.pkg === b.pkg
+      ? a.kind === b.kind
+        ? a.name.localeCompare(b.name)
+        : a.kind === "used"
+          ? -1
+          : 1
+      : a.pkg - b.pkg,
+  );
 }
 
 const seed =
@@ -110,8 +147,14 @@ if (seed != null && !Number.isFinite(seed)) {
   process.exit(2);
 }
 
-const usedPackageIds = pickUsedPackages(n, callSites, seed);
-const surfaceFns = n * fns;
+const boundSites = pickBoundSites(n, fns, callSites, seed);
+const usedPackageIds = [...new Set(boundSites.map((s) => s.pkg))].sort(
+  (a, b) => a - b,
+);
+const expectedUsedMarkers = boundSites.filter((s) => s.kind === "used").length;
+const expectedBoundUnusedMarkers = boundSites.filter(
+  (s) => s.kind === "unused",
+).length;
 
 const reportBase =
   benchCase === "baseline"
@@ -126,13 +169,32 @@ const pkgPrefix = smoke
   ? { singleton: "@lab/smoke-singleton-svc", esm: "@lab/smoke-esm-svc", register: "@lab/smoke-singleton-register" }
   : { singleton: "@lab/singleton-svc", esm: "@lab/esm-svc", register: "@lab/singleton-register" };
 
-function writePartialFixtures(): { esm: string; singleton: string } {
+function writeMultiCallFixtures(): { esm: string; singleton: string } {
   mkdirSync(FIXTURE_GEN, { recursive: true });
-  const esmImports = usedPackageIds
-    .map((i) => `import { used as used_${i} } from "${pkgPrefix.esm}-${i}";`)
+  const tag = benchCase;
+  const byPkg = new Map<number, BoundSite[]>();
+  for (const site of boundSites) {
+    const list = byPkg.get(site.pkg) ?? [];
+    list.push(site);
+    byPkg.set(site.pkg, list);
+  }
+  const pkgIds = [...byPkg.keys()].sort((a, b) => a - b);
+
+  const esmImports = pkgIds
+    .map((pkg) => {
+      const sites = byPkg.get(pkg)!;
+      const specs = sites
+        .map((s, idx) => `${s.name} as fn_${pkg}_${idx}`)
+        .join(", ");
+      return `import { ${specs} } from "${pkgPrefix.esm}-${pkg}";`;
+    })
     .join("\n");
-  const esmCalls = usedPackageIds.map((i) => `used_${i}()`).join(", ");
-  const esmPath = join(FIXTURE_GEN, "esm-entry.partial.ts");
+  const esmCalls = pkgIds
+    .flatMap((pkg) =>
+      (byPkg.get(pkg) ?? []).map((_, idx) => `fn_${pkg}_${idx}()`),
+    )
+    .join(", ");
+  const esmPath = join(FIXTURE_GEN, `esm-entry.${tag}.ts`);
   writeFileSync(
     esmPath,
     `${esmImports}\n\nexport const result = [${esmCalls}].join("|");\n`,
@@ -140,15 +202,17 @@ function writePartialFixtures(): { esm: string; singleton: string } {
 
   const singletonImports = [
     `import { registerPublicServices } from "${pkgPrefix.register}";`,
-    ...usedPackageIds.map(
-      (i) =>
-        `import { Svc${i}Service } from "${pkgPrefix.singleton}-${i}";`,
+    ...pkgIds.map(
+      (pkg) =>
+        `import { Svc${pkg}Service } from "${pkgPrefix.singleton}-${pkg}";`,
     ),
   ].join("\n");
-  const singletonCalls = usedPackageIds
-    .map((i) => `Svc${i}Service.used()`)
+  const singletonCalls = pkgIds
+    .flatMap((pkg) =>
+      (byPkg.get(pkg) ?? []).map((s) => `Svc${pkg}Service.${s.name}()`),
+    )
     .join(", ");
-  const singletonPath = join(FIXTURE_GEN, "singleton-entry.partial.ts");
+  const singletonPath = join(FIXTURE_GEN, `singleton-entry.${tag}.ts`);
   writeFileSync(
     singletonPath,
     `${singletonImports}
@@ -178,16 +242,15 @@ if (!smoke) {
   if (install.status !== 0) process.exit(install.status ?? 1);
 }
 
-const fixturePaths =
-  benchCase === "partial"
-    ? writePartialFixtures()
-    : {
-        esm: join(ROOT, `scripts/lab/fixtures/esm-entry.${mode}.ts`),
-        singleton: join(
-          ROOT,
-          `scripts/lab/fixtures/singleton-entry.${mode}.ts`,
-        ),
-      };
+const fixturePaths = multiCall
+  ? writeMultiCallFixtures()
+  : {
+      esm: join(ROOT, `scripts/lab/fixtures/esm-entry.${mode}.ts`),
+      singleton: join(
+        ROOT,
+        `scripts/lab/fixtures/singleton-entry.${mode}.ts`,
+      ),
+    };
 
 mkdirSync(OUT_DIR, { recursive: true });
 mkdirSync(DOCS_LAB, { recursive: true });
@@ -278,7 +341,7 @@ async function bundleArm(
   const markersUnusedRetained = new Set(unusedHits).size;
   const unusedPerSvc = fns - 1;
   const packagesInGraph =
-    arm === "singleton" ? n : cycles ? n : callSites;
+    arm === "singleton" ? n : cycles ? n : usedPackageIds.length;
   const markersUnusedTotal = packagesInGraph * unusedPerSvc;
 
   return {
@@ -353,8 +416,8 @@ const report = {
   host: "esbuild" as const,
   mode,
   note:
-    benchCase === "partial"
-      ? `App needs ${callSites} of ${surfaceFns} surface functions (used() on ${callSites} packages). Both arms call the same ${callSites} sites; singleton still registers all ${n} packages.`
+    multiCall
+      ? `App binds ${callSites} of ${surfaceFns} surface functions across ${usedPackageIds.length} packages. Both arms call the same ${callSites} sites; singleton still registers all ${n} packages${cycles ? " (cycles may still drag the full ring into ESM)" : ""}.`
       : `ESM call sites: 1 (import { used } from svc-0 only). Surface still ${surfaceFns} fns across ${n} packages; --fns only grows what can be shaken, not what ESM calls.`,
   arms: {
     singleton: {
@@ -394,7 +457,7 @@ const md = `# Scale bench ${benchCase}
 - **N:** ${n}
 - **Fns/svc:** ${fns}
 - **Surface:** ${surfaceFns} functions (${n} × ${fns})
-- **Call sites (both arms):** ${callSites}${benchCase === "partial" ? `: packages [${usedPackageIds.join(", ")}]` : ": ESM imports only \`used\` from svc-0"}
+- **Call sites (both arms):** ${callSites}${multiCall ? `: packages [${usedPackageIds.join(", ")}]` : ": ESM imports only \`used\` from svc-0"}
 - **Cycles:** ${cycles}
 - **Host:** esbuild
 - **Mode:** ${mode}
@@ -427,10 +490,10 @@ A singleton registry does not just import all ${n} packages: it pulls every func
 
 \`\`\`bash
 bun run lab:bench:smoke
-bun run lab:bench -- --n=100
-bun run lab:bench:wide -- --n=100
-bun run lab:bench:cycles -- --n=100
-bun run lab:bench:partial -- --n=100 --used=8
+bun run lab:bench -- --n=100 --used=200
+bun run lab:bench:wide -- --n=100 --used=300
+bun run lab:bench:cycles -- --n=100 --used=300
+bun run lab:bench:partial -- --n=100 --used=500
 \`\`\`
 `;
 
@@ -468,11 +531,13 @@ console.log(`
 `);
 
 const unusedPerSvc = fns - 1;
-const esmUnusedOk = esm.metrics.markersUnusedRetained === 0;
-const esmUsedOk = esm.metrics.markersUsedPresent === callSites;
-// Singleton imports all N packages, so every USED literal may remain even if
-// the fixture only calls K of them: require at least the call sites.
-const singletonUsedOk = singleton.metrics.markersUsedPresent >= callSites;
+// Bound unused_* resolvers intentionally remain in ESM; unbound unused must not.
+const esmUnusedOk =
+  esm.metrics.markersUnusedRetained === expectedBoundUnusedMarkers;
+const esmUsedOk = esm.metrics.markersUsedPresent === expectedUsedMarkers;
+// Singleton side-effect-imports all N, so every USED literal may remain.
+const singletonUsedOk =
+  singleton.metrics.markersUsedPresent >= Math.max(1, expectedUsedMarkers);
 const singletonMin =
   smoke ? 2 : Math.min(n * unusedPerSvc, Math.max(10, unusedPerSvc));
 const singletonPollutes =
@@ -493,6 +558,8 @@ if (
     singletonUsedOk,
     singletonPollutes,
     esmSmaller,
+    expectedUsedMarkers,
+    expectedBoundUnusedMarkers,
     report,
   });
   process.exit(1);
