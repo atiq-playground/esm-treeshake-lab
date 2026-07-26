@@ -34,5 +34,9 @@ jobs:
       - name: Unit tests
         run: bunx nx run @apps/web:test
 
+      # Marker search in scripts/check-treeshake-markers.sh needs rg.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Tree-shake markers
         run: bun run check:treeshake
