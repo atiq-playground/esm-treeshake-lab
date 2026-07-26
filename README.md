@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/github/license/atiq-playground/esm-treeshake-lab)](LICENSE)
 
 ![Lab progress](https://img.shields.io/badge/lab_progress-95%25-brightgreen)
-`███████████████████░` **95%** - on GitHub with green CI and [v0.1.0](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.1.0). Ops leftovers → [Repo todos](#repo-todos-not-configured-yet).
+`███████████████████░` **95%** - on GitHub with green CI and [v0.2.0](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.2.0). Ops leftovers → [Repo todos](#repo-todos-not-configured-yet).
 
 **What this is**  
 A Nx + Bun lab for **member tree-shaking** of Service SDKs (`@service/*` → `tsc` → `dist/` → Next).
