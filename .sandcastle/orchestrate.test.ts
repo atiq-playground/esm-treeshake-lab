@@ -15,7 +15,7 @@ describe("resolveSandboxProvider", () => {
     expect(provider.name).toBe(docker({ imageName: "sandcastle:custom" }).name);
   });
 
-  it("throws on an unknown provider — the single seam this function guards", () => {
+  it("throws on an unknown provider: the single seam this function guards", () => {
     expect(() => resolveSandboxProvider("vercel")).toThrow(
       /Unknown sandbox provider "vercel"/,
     );
@@ -36,7 +36,7 @@ describe("buildRunOptions", () => {
     expect(options.maxIterations).toBeGreaterThan(0);
   });
 
-  it("accepts a caller-supplied sandbox provider — the swappable config seam", () => {
+  it("accepts a caller-supplied sandbox provider: the swappable config seam", () => {
     const customSandbox = docker({ imageName: "sandcastle:custom" });
 
     const options = buildRunOptions({ issueNumber: "1", sandbox: customSandbox });

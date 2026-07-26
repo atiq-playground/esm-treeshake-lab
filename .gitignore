@@ -20,12 +20,14 @@
 /apps/*/.wrangler/
 cloudflare-env.d.ts
 
-# Worker local state / secrets
-/apps/identity-service/.wrangler/
-/apps/identity-service/.dev.vars
+# Scale bench generated packages + bundle out
+/packages/lab/generated/
+/scripts/lab/fixtures/.generated/
+/tmp/
+/apps/*/.dev.vars
 
-# Legacy Nest sqlite (removed)
-/apps/*/data/
+# Fumadocs MDX generated
+/apps/docs/.source/
 
 # package build outputs
 /packages/**/dist/
@@ -41,7 +43,7 @@ cloudflare-env.d.ts
 *.log
 
 # env files (can opt-in for committing if needed)
-# anchored to the root — .sandcastle/.gitignore owns .sandcastle/.env
+# anchored to the root: .sandcastle/.gitignore owns .sandcastle/.env
 /.env*
 
 # vercel

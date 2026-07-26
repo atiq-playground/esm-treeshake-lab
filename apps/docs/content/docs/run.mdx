@@ -1,0 +1,59 @@
+---
+title: Run the bench
+description: "CLI commands. No in-browser spawn."
+---
+
+Copy-paste from the repo root. The docs site does **not** run the bench.
+
+Home metrics and CI always use **UC1 baseline** (`benchmark-latest.*`).
+
+**Call sites:** UC1–UC3 ESM calls **1** function (`used` on svc-0). `--fns` only changes how much *unused* surface exists to shake. UC4 (`partial`) is the case where ESM (and singleton) call **`--used=K`** functions.
+
+## Smoke (CI): UC1
+
+```bash
+bun run lab:bench:smoke
+```
+
+Committed N=3 packages. esbuild + marker asserts. **ESM call sites: 1.**
+
+## Full local: UC1
+
+```bash
+bun run lab:bench -- --n=100
+```
+
+**ESM call sites: 1.** Optional stress: `bun run lab:bench -- --n=1000`.
+
+## Variants (do not overwrite latest)
+
+**UC2 wide**: more functions *defined* per service (`--fns=20` default). ESM still calls **1**.
+
+```bash
+bun run lab:bench:wide -- --n=100
+bun run lab:bench:wide -- --n=100 --fns=40
+```
+
+**UC3 cycles**: wide + package ring on both arms. ESM still calls **1**, but the ring pulls all N modules into the graph.
+
+```bash
+bun run lab:bench:cycles -- --n=100
+```
+
+**UC4 partial**: app needs K of the surface. Both arms call the same K `used()` sites (default `K = ⌊N/2⌋`). Optional `--seed=` shuffles which packages (reproducible).
+
+```bash
+bun run lab:bench:partial -- --n=100 --fns=40 --used=8
+bun run lab:bench:partial -- --n=100 --used=50 --seed=42
+```
+
+## Outputs
+
+| Path | Use |
+|------|-----|
+| Terminal report | Screenshot-friendly summary |
+| `docs/lab/benchmark-latest.md` | UC1: paste into PRs / README |
+| `docs/lab/benchmark-latest.json` | UC1: home page metrics + tooling |
+| `docs/lab/benchmark-wide-latest.*` | UC2 |
+| `docs/lab/benchmark-cycles-latest.*` | UC3 |
+| `docs/lab/benchmark-partial-latest.*` | UC4 |

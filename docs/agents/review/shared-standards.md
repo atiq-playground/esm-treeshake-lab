@@ -6,10 +6,10 @@ Every Frontend, Backend, Shared, Security, and Architecture reviewer must read t
 
 For the assigned partition or specialist scope:
 
-1. **Understand scope** — Identify which assigned files changed, what feature or fix they relate to, and how they connect.
-2. **Read surrounding code** — Don't review changes in isolation. Read the full relevant file and understand imports, dependencies, callers, and tests.
-3. **Apply applicable checklists** — Use this shared file, the assigned domain checklist, relevant repository standards, and only the specialist checklists assigned by the parent orchestrator.
-4. **Report findings** — Use the output format below. Only report issues you are confident about (>80% sure it is a real problem).
+1. **Understand scope**: Identify which assigned files changed, what feature or fix they relate to, and how they connect.
+2. **Read surrounding code**: Don't review changes in isolation. Read the full relevant file and understand imports, dependencies, callers, and tests.
+3. **Apply applicable checklists**: Use this shared file, the assigned domain checklist, relevant repository standards, and only the specialist checklists assigned by the parent orchestrator.
+4. **Report findings**: Use the output format below. Only report issues you are confident about (>80% sure it is a real problem).
 
 Do not rerun branch-level or local diff discovery. The parent orchestrator supplies the assigned file list and diff.
 
@@ -99,14 +99,14 @@ team actually change this in review?" If no, skip.
 
 ### Code Quality (HIGH)
 
-- **Large functions** (>50 lines) — Split into smaller, focused functions
-- **Large files** (>800 lines) — Extract modules by responsibility
-- **Deep nesting** (>4 levels) — Use early returns, extract helpers
-- **Missing error handling** — Unhandled promise rejections, empty catch blocks
-- **Mutation patterns** — Prefer immutable operations (spread, map, filter)
-- **console.log statements** — Remove debug logging before merge
-- **Missing tests** — New code paths without test coverage
-- **Dead code** — Commented-out code, unused imports, unreachable branches
+- **Large functions** (>50 lines): Split into smaller, focused functions
+- **Large files** (>800 lines): Extract modules by responsibility
+- **Deep nesting** (>4 levels): Use early returns, extract helpers
+- **Missing error handling**: Unhandled promise rejections, empty catch blocks
+- **Mutation patterns**: Prefer immutable operations (spread, map, filter)
+- **console.log statements**: Remove debug logging before merge
+- **Missing tests**: New code paths without test coverage
+- **Dead code**: Commented-out code, unused imports, unreachable branches
 
 ```typescript
 // BAD: Deep nesting + mutation
@@ -135,20 +135,20 @@ function processUsers(users) {
 
 ### Performance (MEDIUM)
 
-- **Inefficient algorithms** — O(n^2) when O(n log n) or O(n) is possible
-- **Unnecessary re-renders** — Missing React.memo, useMemo, useCallback
-- **Large bundle sizes** — Importing entire libraries when tree-shakeable alternatives exist
-- **Missing caching** — Repeated expensive computations without memoization
-- **Unoptimized images** — Large images without compression or lazy loading
-- **Synchronous I/O** — Blocking operations in async contexts
+- **Inefficient algorithms**: O(n^2) when O(n log n) or O(n) is possible
+- **Unnecessary re-renders**: Missing React.memo, useMemo, useCallback
+- **Large bundle sizes**: Importing entire libraries when tree-shakeable alternatives exist
+- **Missing caching**: Repeated expensive computations without memoization
+- **Unoptimized images**: Large images without compression or lazy loading
+- **Synchronous I/O**: Blocking operations in async contexts
 
 ### Best Practices (LOW)
 
-- **TODO/FIXME without tickets** — TODOs should reference issue numbers
-- **Missing JSDoc for public APIs** — Exported functions without documentation
-- **Poor naming** — Single-letter variables (x, tmp, data) in non-trivial contexts
-- **Magic numbers** — Unexplained numeric constants
-- **Inconsistent formatting** — Mixed semicolons, quote styles, indentation
+- **TODO/FIXME without tickets**: TODOs should reference issue numbers
+- **Missing JSDoc for public APIs**: Exported functions without documentation
+- **Poor naming**: Single-letter variables (x, tmp, data) in non-trivial contexts
+- **Magic numbers**: Unexplained numeric constants
+- **Inconsistent formatting**: Mixed semicolons, quote styles, indentation
 
 ## Review Output Format
 
@@ -178,7 +178,7 @@ End every review with:
 | MEDIUM   | 3     | info   |
 | LOW      | 1     | note   |
 
-Verdict: WARNING — 2 HIGH issues should be resolved before merge.
+Verdict: WARNING. 2 HIGH issues should be resolved before merge.
 ```
 
 ## Approval Criteria
@@ -186,7 +186,7 @@ Verdict: WARNING — 2 HIGH issues should be resolved before merge.
 - **Approve**: No CRITICAL or HIGH issues, including clean reviews with zero
   findings. This is a valid and expected outcome.
 - **Warning**: HIGH issues only (can merge with caution)
-- **Block**: CRITICAL issues found — must fix before merge
+- **Block**: CRITICAL issues found; must fix before merge
 
 Do not withhold approval to appear rigorous. If the diff is clean, approve it.
 

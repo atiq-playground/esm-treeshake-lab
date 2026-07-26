@@ -1,6 +1,6 @@
 # Sandbox image for AFK Sandcastle runs against this App (see .sandcastle/orchestrate.ts
 # and create-atiq-app issue #10). Extends the sandcastle default (Node + git + gh +
-# Claude Code CLI + non-root `agent` user) with Bun (this App's runtime — see
+# Claude Code CLI + non-root `agent` user) with Bun (this App's runtime: see
 # package.json `packageManager`) and the Playwright OS dependencies needed for the
 # e2e smoke test (create-atiq-app issue #9).
 FROM node:22-bookworm-slim
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# GitHub CLI — required for the prompt's `gh issue view`/`gh pr` dynamic context.
+# GitHub CLI: required for the prompt's `gh issue view`/`gh pr` dynamic context.
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -25,13 +25,13 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     && apt-get update && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Bun — this template installs/runs/tests with Bun, not npm (see package.json).
+# Bun: this template installs/runs/tests with Bun, not npm (see package.json).
 ENV BUN_INSTALL=/usr/local/bun
 RUN curl -fsSL https://bun.sh/install | bash \
     && ln -s "$BUN_INSTALL/bin/bun" /usr/local/bin/bun
 ENV PATH="$BUN_INSTALL/bin:${PATH}"
 
-# Claude Code CLI — the agent Sandcastle drives via claudeCode() in orchestrate.ts.
+# Claude Code CLI: the agent Sandcastle drives via claudeCode() in orchestrate.ts.
 RUN npm install -g @anthropic-ai/claude-code
 
 # Playwright's OS-level dependencies (fonts, codecs, headless browser libs) for the

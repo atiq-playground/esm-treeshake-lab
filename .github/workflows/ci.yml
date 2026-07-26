@@ -18,25 +18,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build packages + web
+      - name: Scale bench smoke (N=3)
+        run: bun run lab:bench:smoke
+
+      - name: Build docs
         run: bun run build
-        env:
-          AUTH_PUBLIC_API_URL: http://127.0.0.1:8787/public/api
-          AUTH_ADMIN_API_URL: http://127.0.0.1:8787/admin/api
-          ACCOUNT_PUBLIC_API_URL: http://127.0.0.1:8787/public/api
-          ACCOUNT_ADMIN_API_URL: http://127.0.0.1:8787/admin/api
-          OIDC_CLIENT_SECRET: replace-me
-          COOKIE_SECURE: "0"
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Unit tests
-        run: bunx nx run @apps/web:test
-
-      # Marker search in scripts/check-treeshake-markers.sh needs rg.
-      - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
-
-      - name: Tree-shake markers
-        run: bun run check:treeshake

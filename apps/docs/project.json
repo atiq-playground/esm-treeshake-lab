@@ -1,0 +1,28 @@
+{
+  "name": "@apps/docs",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/docs",
+  "targets": {
+    "dev": {
+      "command": "next dev --port 3000",
+      "options": { "cwd": "apps/docs" }
+    },
+    "build": {
+      "command": "next build",
+      "options": { "cwd": "apps/docs" }
+    },
+    "start": {
+      "command": "next start",
+      "options": { "cwd": "apps/docs" }
+    },
+    "preview": {
+      "command": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+      "options": { "cwd": "apps/docs" }
+    },
+    "deploy": {
+      "command": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+      "options": { "cwd": "apps/docs" }
+    }
+  }
+}

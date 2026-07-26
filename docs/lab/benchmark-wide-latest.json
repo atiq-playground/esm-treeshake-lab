@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-26T14:29:35.117Z",
+  "case": "wide",
+  "n": 100,
+  "fns": 40,
+  "cycles": false,
+  "host": "esbuild",
+  "mode": "generated",
+  "arms": {
+    "singleton": {
+      "bytes": 8663206,
+      "buildMs": 74,
+      "markersUsedPresent": 100,
+      "markersUnusedRetained": 3900,
+      "markersUnusedTotal": 3900,
+      "size": {
+        "bytes": 8663206,
+        "kb": 8460.162,
+        "mb": 8.2619,
+        "gb": 0.008068,
+        "primary": "8.26 MB",
+        "detail": "8,663,206 B · 8460.2 KB · 8.26 MB"
+      }
+    },
+    "esm": {
+      "bytes": 200,
+      "buildMs": 4,
+      "markersUsedPresent": 1,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 39,
+      "size": {
+        "bytes": 200,
+        "kb": 0.195,
+        "mb": 0.0002,
+        "gb": 0,
+        "primary": "200 B",
+        "detail": "200 B"
+      }
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 100,
+    "bytesSaved": 8663006,
+    "sizeSaved": {
+      "bytes": 8663006,
+      "kb": 8459.967,
+      "mb": 8.2617,
+      "gb": 0.008068,
+      "primary": "8.26 MB",
+      "detail": "8,663,006 B · 8460 KB · 8.26 MB"
+    },
+    "unusedMarkersDelta": 3900
+  }
+}

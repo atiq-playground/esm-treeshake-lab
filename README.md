@@ -1,84 +1,95 @@
 # ESM tree-shake lab
 
 [![CI](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml)
-[![Deploy](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/deploy.yml/badge.svg)](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/deploy.yml)
-[![Release](https://img.shields.io/github/v/release/atiq-playground/esm-treeshake-lab?display_name=tag&sort=semver)](https://github.com/atiq-playground/esm-treeshake-lab/releases)
 [![Bun](https://img.shields.io/badge/bun-1.3.14-fbf0df?logo=bun&logoColor=f472b6)](package.json)
 [![License](https://img.shields.io/github/license/atiq-playground/esm-treeshake-lab)](LICENSE)
 
-![Lab progress](https://img.shields.io/badge/lab_progress-95%25-brightgreen)
-`███████████████████░` **95%** - on GitHub with green CI and [v0.2.0](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.2.0). Ops leftovers → [Repo todos](#repo-todos-not-configured-yet).
-
 **What this is**  
-A Nx + Bun lab for **member tree-shaking** of Service SDKs (`@service/*` → `tsc` → `dist/` → Next).
+A Nx + Bun lab that **measures** singleton-plugin packaging vs ESM selective imports (scale bench at N), and explains the numbers with **Fumadocs**.
 
-**Why a full app**  
-Shake-out is proven on a close-to-real demo (auth, accounts, Worker), not toy scripts, so you can see how it looks in something you'd ship.
+**Focus**  
+Metrics only: bytes, unused markers, build time. No auth / identity demo.
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `apps/web` | Next.js app + cookie auth BFF |
-| `apps/identity-service` | Tokens + account APIs (Worker + D1) |
-| `packages/services/*` | `@service/account-*`, `@service/token-*` |
-| `packages/core/*` | Shared service core |
-| `scripts/check-treeshake-markers.sh` | CI proof unused SDK markers are gone |
+| `apps/docs` | Fumadocs site (metrics, why, run, research) |
+| `packages/lab/*` | `@lab/singleton-services`, smoke stubs, generated stubs |
+| `scripts/lab/*` | generate + esbuild bench |
+| `docs/lab/benchmark-*.latest.*` | Case reports (UC1 = `benchmark-latest.*`) |
 
 ## Getting started
 
 ```bash
 bun install
-cp apps/identity-service/.dev.vars.example apps/identity-service/.dev.vars
-bun run db:migrate:identity
-
-# Terminal A - identity Worker (:8787)
-bun run dev:identity
-
-# Terminal B - Next
-export AUTH_PUBLIC_API_URL=http://127.0.0.1:8787/public/api
-export AUTH_ADMIN_API_URL=http://127.0.0.1:8787/admin/api
-export ACCOUNT_PUBLIC_API_URL=http://127.0.0.1:8787/public/api
-export ACCOUNT_ADMIN_API_URL=http://127.0.0.1:8787/admin/api
-export OIDC_CLIENT_SECRET=replace-me
-export COOKIE_SECURE=0
-bun run dev
+bun run lab:bench:smoke
+bun run dev          # docs at http://localhost:3000
 ```
 
-Demo login: `demo@example.com` / `password`.
+## Scale bench
+
+Compares **global singleton plugins** (import all N → register) vs **ESM** (import only what you call). Host: **esbuild**.
+
+**Surface vs call sites:** `--fns` = functions *defined* per package. UC1–UC3 ESM still **calls 1** (`used` on svc-0). UC4 is “app needs K functions.”
+
+| Case | Command | Surface / graph | ESM call sites | Report |
+|------|---------|-----------------|----------------|--------|
+| UC1 baseline | `lab:bench:smoke` / `lab:bench` | 2 fns/svc | **1** | `benchmark-latest.*` (home + CI) |
+| UC2 wide | `lab:bench:wide -- --n=100` | `--fns=20` (or 40) | **1** | `benchmark-wide-latest.*` |
+| UC3 cycles | `lab:bench:cycles -- --n=100` | wide + package ring | **1** (ring still pulls N modules) | `benchmark-cycles-latest.*` |
+| UC4 partial | `lab:bench:partial -- --n=100 --used=8` | `--fns` surface; needs K | **K** (default `⌊N/2⌋`) | `benchmark-partial-latest.*` |
+
+**Smoke (CI): UC1 only**
+
+```bash
+bun run lab:bench:smoke
+```
+
+**Full local**
+
+```bash
+bun run lab:bench -- --n=100
+bun run lab:bench:wide -- --n=100
+bun run lab:bench:cycles -- --n=100
+
+# “We only needed 8 of the API surface”
+bun run lab:bench:partial -- --n=100 --fns=40 --used=8
+
+# optional: shuffle which K packages (reproducible)
+bun run lab:bench:partial -- --n=100 --used=50 --seed=42
+
+# optional stress (see docs/research/scale-bench-n1000-bun-esbuild.md)
+bun run lab:bench -- --n=1000
+```
+
+Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
+
+**Outputs**
+
+| Output | Use |
+|--------|-----|
+| Terminal report | Screenshot-friendly summary |
+| `docs/lab/benchmark-latest.*` | UC1: home + PRs |
+| `docs/lab/benchmark-wide-latest.*` | UC2 |
+| `docs/lab/benchmark-cycles-latest.*` | UC3 |
+| `docs/lab/benchmark-partial-latest.*` | UC4 |
 
 ## Scripts
 
 | Script | What it does |
 |--------|----------------|
-| `dev` | Next dev (`@apps/web`) |
-| `dev:identity` | Identity Worker (`wrangler dev`) |
-| `db:migrate:identity` | Apply D1 migrations locally |
-| `build` | `nx run-many -t build` |
-| `check:treeshake` | Search `.next` for shake markers |
-| `test:e2e` | Playwright (local; not in CI yet) |
-| `orchestrate` | Sandcastle AFK runner (**not configured**) |
+| `dev` | Fumadocs (`@apps/docs`) |
+| `build` | Next build docs |
+| `preview` | OpenNext build + local Workers runtime |
+| `deploy` | OpenNext build + deploy to Cloudflare Workers |
+| `lab:generate` | Generate N singleton + ESM stub packages |
+| `lab:bench:smoke` | UC1 N=3 scale bench (CI) |
+| `lab:bench` | UC1 full scale bench (default N=100) |
+| `lab:bench:wide` | UC2: many fns/svc defined (ESM still calls 1) |
+| `lab:bench:cycles` | UC3: wide + cyclic package ring |
+| `lab:bench:partial` | UC4: both arms call `--used=K` sites |
 
-## Identity service
+## Map
 
-One deployable "identity" surface: OIDC-shaped tokens and user/account APIs under `/public/api` and `/admin/api`, so token and account SDKs stay separate packages against one origin. Easy to extract later for other demos.
-
-**Data model (lab IdP, not production IAM)**
-
-- Passwords: PBKDF2-SHA256 (210k), `salt$hash`
-- Opaque access/refresh: SHA-256 hashes only; refresh rotation + `family_id`
-- Users: soft delete, `rvn`, email/password/login timestamps, lockout
-- `roles` / `user_roles`; append-only `audit_logs`
-- Password change / suspend / soft-delete / admin reset → sessions revoked
-- No MFA; HS256 shared secret; no reset emails
-
-## Repo todos (not configured yet)
-
-Scaffolding exists; these are **not wired** until setup is finished:
-
-| Item | Gap |
-|------|-----|
-| **Sandcastle / AFK** | No `.sandcastle/.env`, Docker image, or AFK Action; `setup-skills` triage still outstanding. See [`.sandcastle/README.md`](.sandcastle/README.md) |
-| **Cloudflare Deploy** | Repo secrets `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` unset; preview deploy will fail |
-| **E2E in CI** | Playwright under `apps/web`; CI does not run `test:e2e` yet |
-| **Lab IdP limits** | MFA / reset email / stronger crypto; intentional until promoted beyond demo |
+Planning map (destination met): [Singleton vs ESM scale bench](https://github.com/atiq-playground/esm-treeshake-lab/issues/15).

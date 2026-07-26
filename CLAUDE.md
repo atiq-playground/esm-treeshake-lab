@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Canonical guidance lives in [AGENTS.md](AGENTS.md) — read it first.** This
+**Canonical guidance lives in [AGENTS.md](AGENTS.md): read it first.** This
 file is a deliberately thin pointer to avoid drift. Do not duplicate the soul
 here; add only Claude-specific notes below. The hard rules are in
 [RULES.md](RULES.md).

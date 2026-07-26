@@ -6,13 +6,13 @@ Read this file together with `docs/agents/review/shared-standards.md` when revie
 
 When reviewing backend code:
 
-- **Unvalidated input** — Request body/params used without schema validation
-- **Missing rate limiting** — Public endpoints without throttling
-- **Unbounded queries** — `SELECT *` or queries without LIMIT on user-facing endpoints
-- **N+1 queries** — Fetching related data in a loop instead of a join/batch
-- **Missing timeouts** — External HTTP calls without timeout configuration
-- **Error message leakage** — Sending internal error details to clients
-- **Missing CORS configuration** — APIs accessible from unintended origins
+- **Unvalidated input**: Request body/params used without schema validation
+- **Missing rate limiting**: Public endpoints without throttling
+- **Unbounded queries**: `SELECT *` or queries without LIMIT on user-facing endpoints
+- **N+1 queries**: Fetching related data in a loop instead of a join/batch
+- **Missing timeouts**: External HTTP calls without timeout configuration
+- **Error message leakage**: Sending internal error details to clients
+- **Missing CORS configuration**: APIs accessible from unintended origins
 
 ```typescript
 // BAD: N+1 query pattern

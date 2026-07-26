@@ -12,7 +12,7 @@ paths:
 
 ## XSS via `dangerouslySetInnerHTML`
 
-CRITICAL. The prop name is deliberately scary — treat every usage as a code review halt.
+CRITICAL. The prop name is deliberately scary: treat every usage as a code review halt.
 
 ```tsx
 // CRITICAL: unsanitized user input
@@ -71,7 +71,7 @@ React warns about `javascript:` URLs in `href` in development mode, but does not
 <a href={externalUrl} target="_blank" rel="noopener noreferrer">External</a>
 ```
 
-Modern browsers default to `noopener` when `target="_blank"`, but do not rely on browser defaults — be explicit.
+Modern browsers default to `noopener` when `target="_blank"`, but do not rely on browser defaults: be explicit.
 
 ## Server Action Input Validation
 
@@ -96,7 +96,7 @@ export async function updateUser(_state: unknown, formData: FormData) {
 }
 ```
 
-- Authenticate inside the action — do not trust the client-side route gate
+- Authenticate inside the action: do not trust the client-side route gate
 - Authorize: confirm the current user has permission for the specific record they are mutating
 - Rate limit sensitive actions
 
@@ -120,8 +120,8 @@ Audit on every PR that touches env vars: would this string in the public bundle 
 
 ## Authentication / Authorization
 
-- Never store sessions in `localStorage` — accessible to any XSS. Use httpOnly secure cookies.
-- Never trust client-set state to gate sensitive UI. Render-gating in JSX prevents display, not access — the API must enforce.
+- Never store sessions in `localStorage`: accessible to any XSS. Use httpOnly secure cookies.
+- Never trust client-set state to gate sensitive UI. Render-gating in JSX prevents display, not access: the API must enforce.
 - CSRF: cookie-based auth requires CSRF tokens or `SameSite=Strict`/`Lax` cookies
 - Use double-submit cookies or origin verification for form actions when not using framework defaults
 
@@ -139,8 +139,8 @@ frame-ancestors 'none';
 ```
 
 - Avoid `unsafe-inline` and `unsafe-eval` in `script-src`
-- For SSR with inline scripts (Next.js streaming, hydration data), use per-request nonces — both Next.js and Remix support nonce injection
-- `style-src 'unsafe-inline'` is often unavoidable for CSS-in-JS libraries — document the tradeoff
+- For SSR with inline scripts (Next.js streaming, hydration data), use per-request nonces: both Next.js and Remix support nonce injection
+- `style-src 'unsafe-inline'` is often unavoidable for CSS-in-JS libraries: document the tradeoff
 
 ## Prototype Pollution via Object Spread
 
@@ -159,9 +159,9 @@ setState({ ...state, ...parsed });
 
 When using `renderToString` or `renderToPipeableStream`:
 
-- All values rendered inside JSX are escaped by React — safe
-- Values passed to `dangerouslySetInnerHTML` are NOT escaped — same rules as client
-- Manually constructed HTML wrappers around the React output must be escaped or sanitized — never concatenate user input into the surrounding HTML template
+- All values rendered inside JSX are escaped by React: safe
+- Values passed to `dangerouslySetInnerHTML` are NOT escaped: same rules as client
+- Manually constructed HTML wrappers around the React output must be escaped or sanitized: never concatenate user input into the surrounding HTML template
 
 ## Third-Party Components
 

@@ -20,11 +20,11 @@ You are a senior code reviewer ensuring high standards of code quality and secur
 
 Load only the rule files required by each reviewer:
 
-- `docs/agents/review/shared-standards.md` — Required by every Standards reviewer.
-- `docs/agents/review/frontend-checklist.md` — Required for frontend-owned changes.
-- `docs/agents/review/backend-checklist.md` — Required for backend-owned changes.
-- `docs/agents/review/security-checklist.md` — Required when security-sensitive changes are present or a Security reviewer is launched.
-- `docs/agents/review/architecture-smells.md` — Required when architectural-smell review is assigned to an Implementation reviewer or a dedicated Architecture reviewer.
+- `docs/agents/review/shared-standards.md`: Required by every Standards reviewer.
+- `docs/agents/review/frontend-checklist.md`: Required for frontend-owned changes.
+- `docs/agents/review/backend-checklist.md`: Required for backend-owned changes.
+- `docs/agents/review/security-checklist.md`: Required when security-sensitive changes are present or a Security reviewer is launched.
+- `docs/agents/review/architecture-smells.md`: Required when architectural-smell review is assigned to an Implementation reviewer or a dedicated Architecture reviewer.
 
 Do not paste the full contents of these files into sub-agent prompts. Tell each sub-agent which files to read, then pass only branch context, relevant repository-standard paths, partition-specific diffs, and cross-boundary summaries.
 
@@ -32,8 +32,8 @@ Do not paste the full contents of these files into sub-agent prompts. Tell each 
 
 The review has two deliberately separate axes:
 
-- **Standards** — Does the changed code follow the repository's documented standards, established conventions, security requirements, quality expectations, and architectural principles?
-- **Spec** — Does the branch faithfully implement the originating issue, PRD, specification, or other authoritative requirement source?
+- **Standards**: Does the changed code follow the repository's documented standards, established conventions, security requirements, quality expectations, and architectural principles?
+- **Spec**: Does the branch faithfully implement the originating issue, PRD, specification, or other authoritative requirement source?
 
 Do not merge or rerank these axes. Code can satisfy the repository's standards while implementing the wrong feature, or implement the requested feature while violating repository standards. Findings from one axis must not hide findings from the other.
 
@@ -63,7 +63,7 @@ git diff --name-status <fixed-point>...HEAD
 git log <fixed-point>..HEAD --oneline
 ```
 
-Before going further, confirm the fixed point resolves and the diff is non-empty. A bad ref or empty diff should fail here — not inside parallel sub-agents.
+Before going further, confirm the fixed point resolves and the diff is non-empty. A bad ref or empty diff should fail here: not inside parallel sub-agents.
 
 ### Local Changes Review
 
@@ -192,14 +192,14 @@ Launch all applicable reviewers in a single message so they run in parallel and 
 
 ### Always Conditional on Partition
 
-- **Frontend Implementation Reviewer** — Launch when the Frontend partition is non-empty.
-- **Backend Implementation Reviewer** — Launch when the Backend partition is non-empty.
-- **Shared Implementation Reviewer** — Launch only when a distinct Shared partition is required.
-- **Spec Compliance Reviewer** — Launch when an authoritative spec is available.
+- **Frontend Implementation Reviewer**: Launch when the Frontend partition is non-empty.
+- **Backend Implementation Reviewer**: Launch when the Backend partition is non-empty.
+- **Shared Implementation Reviewer**: Launch only when a distinct Shared partition is required.
+- **Spec Compliance Reviewer**: Launch when an authoritative spec is available.
 
 
 
-### Security Reviewer — High-Risk Trigger Only
+### Security Reviewer: High-Risk Trigger Only
 
 Launch a dedicated Security reviewer only when the diff materially changes a trust boundary or security-sensitive behavior, including:
 
@@ -213,7 +213,7 @@ Do not launch a separate Security reviewer for ordinary UI, refactor, test-only,
 
 When launched, the Security reviewer owns the focused threat-boundary review. Implementation reviewers still report concrete security defects they encounter, but the parent must consolidate duplicate findings.
 
-### Architecture Reviewer — Cross-Cutting Trigger Only
+### Architecture Reviewer: Cross-Cutting Trigger Only
 
 Launch a dedicated Architecture reviewer only when the diff materially changes architecture, including:
 

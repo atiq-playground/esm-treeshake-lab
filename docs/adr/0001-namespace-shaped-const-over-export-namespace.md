@@ -4,9 +4,9 @@ Service SDK public surfaces keep call sites like `AccountPublicService.getUser()
 
 ## Considered Options
 
-- **True `export namespace`** — honest TS keyword; fails unused-member shake-out on Next 16.2 (Turbopack + webpack).
-- **Namespace-shaped `export const` (chosen)** — same call site; shake-out passes marker search.
-- **Named exports only (`import { getUser }`)** — shakeable, but breaks the required `AccountPublicService.getUser()` API.
+- **True `export namespace`**: honest TS keyword; fails unused-member shake-out on Next 16.2 (Turbopack + webpack).
+- **Namespace-shaped `export const` (chosen)**: same call site; shake-out passes marker search.
+- **Named exports only (`import { getUser }`)**: shakeable, but breaks the required `AccountPublicService.getUser()` API.
 
 ## Consequences
 

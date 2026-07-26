@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-26T14:53:22.443Z",
+  "case": "baseline",
+  "n": 3,
+  "fns": 2,
+  "cycles": false,
+  "callSites": 1,
+  "usedPackageIds": [
+    0
+  ],
+  "seed": null,
+  "surfaceFns": 6,
+  "host": "esbuild",
+  "mode": "smoke",
+  "note": "ESM call sites: 1 (import { used } from svc-0 only). Surface still 6 fns across 3 packages; --fns only grows what can be shaken, not what ESM calls.",
+  "arms": {
+    "singleton": {
+      "bytes": 8337,
+      "buildMs": 22,
+      "markersUsedPresent": 3,
+      "markersUnusedRetained": 3,
+      "markersUnusedTotal": 3,
+      "size": {
+        "bytes": 8337,
+        "kb": 8.142,
+        "mb": 0.008,
+        "gb": 0.000008,
+        "primary": "8.1 KB",
+        "detail": "8,337 B · 8.1 KB"
+      }
+    },
+    "esm": {
+      "bytes": 192,
+      "buildMs": 2,
+      "markersUsedPresent": 1,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 1,
+      "size": {
+        "bytes": 192,
+        "kb": 0.188,
+        "mb": 0.0002,
+        "gb": 0,
+        "primary": "192 B",
+        "detail": "192 B"
+      }
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 97.7,
+    "bytesSaved": 8145,
+    "sizeSaved": {
+      "bytes": 8145,
+      "kb": 7.954,
+      "mb": 0.0078,
+      "gb": 0.000008,
+      "primary": "8 KB",
+      "detail": "8,145 B · 8 KB"
+    },
+    "unusedMarkersDelta": 3,
+    "esmOfSingletonPct": 2.3,
+    "singletonVsEsmFactor": 43.4,
+    "callSiteCoveragePct": 16.67,
+    "unusedRemovedPct": 100
+  }
+}

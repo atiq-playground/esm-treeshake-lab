@@ -1,6 +1,6 @@
 {
   "name": "esm-treeshake-lab",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "packageManager": "bun@1.3.14",
   "engines": {
@@ -8,38 +8,33 @@
   },
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "packages/core/*",
-    "packages/services/*"
+    "packages/lab/*",
+    "packages/lab/smoke/*",
+    "packages/lab/smoke/*/*",
+    "packages/lab/generated/singleton/*",
+    "packages/lab/generated/esm/*"
   ],
   "scripts": {
-    "dev": "nx run @apps/web:dev",
-    "build": "nx run-many -t build",
-    "typecheck": "nx run-many -t typecheck",
-    "test": "nx run-many -t test",
-    "dev:identity": "nx run @apps/identity-service:dev",
-    "db:migrate:identity": "nx run @apps/identity-service:db:migrate:local",
-    "start": "nx run @apps/web:start",
-    "lint": "nx run @apps/web:lint",
-    "test:e2e": "nx run @apps/web:test:e2e",
-    "build:cf": "nx run @apps/web:build:cf",
-    "check:treeshake": "bash scripts/check-treeshake-markers.sh",
+    "dev": "nx run @apps/docs:dev",
+    "build": "nx run @apps/docs:build",
+    "start": "nx run @apps/docs:start",
+    "preview": "nx run @apps/docs:preview",
+    "deploy": "nx run @apps/docs:deploy",
+    "lab:generate": "bun run scripts/lab/generate-scale-bench.ts",
+    "lab:bench": "bun run scripts/lab/run-scale-bench.ts",
+    "lab:bench:smoke": "bun run scripts/lab/run-scale-bench.ts --smoke",
+    "lab:bench:wide": "bun run scripts/lab/run-scale-bench.ts --case=wide",
+    "lab:bench:cycles": "bun run scripts/lab/run-scale-bench.ts --case=cycles",
+    "lab:bench:partial": "bun run scripts/lab/run-scale-bench.ts --case=partial",
     "orchestrate": "bun run .sandcastle/orchestrate.ts"
   },
   "devDependencies": {
     "@ai-hero/sandcastle": "0.12.0",
-    "@nx/eslint": "21.6.11",
     "@nx/next": "21.6.11",
-    "@nx/playwright": "21.6.11",
-    "@nx/vite": "21.6.11",
     "@nx/web": "21.6.11",
-    "@vitest/ui": "^3.0.0",
-    "eslint": "~8.57.0",
-    "jiti": "2.4.2",
+    "esbuild": "^0.25.0",
     "nx": "21.6.11",
-    "typescript": "^5",
-    "vite": "^7.0.0",
-    "vitest": "^3.0.0"
+    "typescript": "~5.8.0"
   },
   "ignoreScripts": [
     "sharp",
@@ -48,6 +43,5 @@
   "trustedDependencies": [
     "sharp",
     "unrs-resolver"
-  ],
-  "dependencies": {}
+  ]
 }

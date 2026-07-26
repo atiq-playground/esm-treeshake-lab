@@ -14,7 +14,7 @@ Also capture: required `package.json` `exports` / `type` shape, whether `transpi
 ## Executive answer
 
 1. **`tsc` emits `export namespace` as a single IIFE that assigns every member** onto one exported object. That shape is **not** member-tree-shaken by Next 16.2 (Turbopack or webpack): unused method markers remain in `.next/**/*.js`.
-2. **A namespace-looking but call-site-compatible alternative — `export const AccountPublicService = { getUser, … }` — is member-tree-shaken** by the same Next builds: unused markers disappear from JS chunks while `AccountPublicService.getUser(...)` still works.
+2. **A namespace-looking but call-site-compatible alternative: `export const AccountPublicService = { getUser, … }`: is member-tree-shaken** by the same Next builds: unused markers disappear from JS chunks while `AccountPublicService.getUser(...)` still works.
 3. **Verification procedure that works:** production `next build` in `@apps/web`, then search **compiled JS under `.next`** (not HTML/RSC payloads, not `.map`) for the markers from [Lock account SDK demo API](https://github.com/atiq-playground/esm-treeshake-lab/issues/2).
 4. **`transpilePackages` is not required** when packages ship plain JS via `exports` → `dist/` (Next’s own docs say you can build to JS and point `main`/`exports` at it instead of listing the package).
 5. **Recommended package shape for shakeability:** `"type": "module"`, conditional `exports` pointing at `dist`, and `"sideEffects": false` (webpack’s documented hint; harmless for the const-object case that already shook without it in our trials).
@@ -40,7 +40,7 @@ export var AccountPublicService;
 })(AccountPublicService || (AccountPublicService = {}));
 ```
 
-All members are installed via property assignment inside one evaluated IIFE. The TypeScript handbook documents namespaces as a runtime organizational construct ([Namespaces](https://www.typescriptlang.org/docs/handbook/namespaces.html)); it does **not** claim member-level dead-code elimination after emit. For Node ESM detection / `"type": "module"`, see [Node.js Packages — Determining module system](https://nodejs.org/api/packages.html#determining-module-system) and TypeScript’s [`module` / `nodenext` reference](https://www.typescriptlang.org/docs/handbook/modules/reference.html).
+All members are installed via property assignment inside one evaluated IIFE. The TypeScript handbook documents namespaces as a runtime organizational construct ([Namespaces](https://www.typescriptlang.org/docs/handbook/namespaces.html)); it does **not** claim member-level dead-code elimination after emit. For Node ESM detection / `"type": "module"`, see [Node.js Packages: Determining module system](https://nodejs.org/api/packages.html#determining-module-system) and TypeScript’s [`module` / `nodenext` reference](https://www.typescriptlang.org/docs/handbook/modules/reference.html).
 
 **Implication:** bundlers see one live export that is mutated. That is a known hard case for property-level DCE (historically called out for Rollup against the same IIFE pattern). Next 16.2 does not recover member shaking from this emit (see § Empirical matrix).
 
@@ -90,7 +90,7 @@ After `next build` (Turbopack default in 16.2):
 | Location | Role for marker search |
 | --- | --- |
 | `.next/server/chunks/ssr/*.js` | **Primary.** Server/SSR chunks that inlined or retained SDK code. |
-| `.next/static/chunks/*.js` | Client chunks — check if any SDK call sites are client-bundled. |
+| `.next/static/chunks/*.js` | Client chunks: check if any SDK call sites are client-bundled. |
 | `.next/server/app/**/*.html`, `*.rsc`, `*.segments/**` | Prerendered **payload**. Used markers appear here as **rendered strings** even when the function body was DCE’d from JS. Do **not** treat HTML/RSC hits as “code retained.” |
 | `*.js.map` | Source maps may retain unused strings. **Exclude maps** from the pass/fail search. |
 
@@ -108,7 +108,7 @@ Minimal App Router page called only `AccountPublicService.getUser("123")` (or ba
 | same | webpack | yes | **no (shaken)** |
 | Per-method files + const object barrel (`sideEffects: false`) | Turbopack | yes | **no (shaken)** |
 | Named ESM exports + direct `import { getUser }` | Turbopack | yes | **no (shaken)** |
-| Split `export namespace` per file + `export *` barrel | — | broken (TS2308 / runtime missing members) | n/a |
+| Split `export namespace` per file + `export *` barrel | - | broken (TS2308 / runtime missing members) | n/a |
 
 **Conclusion for the lab goal (“prove unused namespace members shaken”):** true TypeScript `export namespace` **fails** the proof on Next 16.2. A **namespace-shaped `export const`** keeps `AccountPublicService.getUser` call sites and **passes** the marker test.
 
@@ -116,10 +116,10 @@ Minimal App Router page called only `AccountPublicService.getUser("123")` (or ba
 
 - **IIFE namespace emit:** property assignment prevents member DCE (see matrix).
 - **Judging by HTML/RSC:** used markers appear in prerender output as data; search **JS only**.
-- **Source maps:** can false-positive unused markers — exclude `*.map`.
+- **Source maps:** can false-positive unused markers: exclude `*.map`.
 - **Barrel + side effects:** webpack documents that without reliable side-effect info, unused exports are harder to drop ([Tree Shaking](https://webpack.js.org/guides/tree-shaking/)). Prefer `"sideEffects": false` on SDK packages; still insufficient for IIFE namespaces.
 - **`optimizePackageImports`:** helps large multi-export packages ([docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/optimizePackageImports)); irrelevant to single-file namespace IIFEs and not a substitute for a shakeable emit.
-- **`serverExternalPackages`:** would leave the package unbundled (Node `require`/`import` at runtime) — wrong for a tree-shake demo ([package bundling](https://nextjs.org/docs/app/guides/package-bundling)).
+- **`serverExternalPackages`:** would leave the package unbundled (Node `require`/`import` at runtime): wrong for a tree-shake demo ([package bundling](https://nextjs.org/docs/app/guides/package-bundling)).
 - **Cross-file `export namespace` merge via `export *`:** TypeScript rejects duplicate exported names; not a viable split strategy.
 
 ---
@@ -132,7 +132,7 @@ Assume markers from [Lock account SDK demo API](https://github.com/atiq-playgrou
 - Unused examples: `EXECUTING_ACCOUNT_PUBLIC_UPDATE_PROFILE`, `EXECUTING_ACCOUNT_ADMIN_SUSPEND_USER`, …
 
 ```bash
-# From monorepo root — build SDKs first (exact Nx target names TBD by bootstrap ticket), then web:
+# From monorepo root: build SDKs first (exact Nx target names TBD by bootstrap ticket), then web:
 bun run nx run @apps/web:build
 # or, once apps/web is the Next app:
 cd apps/web && bun run build
@@ -164,9 +164,9 @@ rg -n -e "$UNUSED" .next -g '*.map' || echo '(none in maps either)'
 
 **Interpretation rules:**
 
-1. **Pass:** every *used* marker appears in at least one `.next/**/*.js` **or** is acceptable only as prerendered page text if the call was fully inlined away — prefer still seeing the used path exercised (page content / server chunk). For this lab, asserting used markers in JS *or* RSC/HTML **and** unused markers absent from JS is enough.
+1. **Pass:** every *used* marker appears in at least one `.next/**/*.js` **or** is acceptable only as prerendered page text if the call was fully inlined away: prefer still seeing the used path exercised (page content / server chunk). For this lab, asserting used markers in JS *or* RSC/HTML **and** unused markers absent from JS is enough.
 2. **Fail:** any *unused* marker string in `.next/**/*.js` (excluding maps).
-3. If unused markers appear only under a surprising chunk path, widen the search to all of `.next` with the same JS filter — do not narrow to a single filename; Turbopack hashes chunk names (`[root-of-the-server]__*.js`).
+3. If unused markers appear only under a surprising chunk path, widen the search to all of `.next` with the same JS filter: do not narrow to a single filename; Turbopack hashes chunk names (`[root-of-the-server]__*.js`).
 
 ---
 
@@ -196,4 +196,4 @@ rg -n -e "$UNUSED" .next -g '*.map' || echo '(none in maps either)'
 
 ### Related lab decisions
 
-- [Lock account SDK demo API](https://github.com/atiq-playground/esm-treeshake-lab/issues/2) — marker strings and demo call sites
+- [Lock account SDK demo API](https://github.com/atiq-playground/esm-treeshake-lab/issues/2): marker strings and demo call sites

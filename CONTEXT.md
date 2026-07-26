@@ -1,61 +1,29 @@
 # ESM Tree-Shake Lab
 
-A monorepo lab for packaging service SDKs so many apps can depend on only what they import, with verifiable ESM tree-shaking.
+A metrics lab comparing **singleton plugin** packaging vs **ESM selective imports** at scale (N), explained with Fumadocs.
 
 ## Language
 
-**Service SDK**:
-A workspace package under `packages/services/*` that wraps HTTP calls to a backend (plus light web/app orchestration when needed). Not a deployable server and not where fake backend logic lives.
-_Avoid_: treating SDKs as the NestJS service, microservice implementation, `@service/web`
+**Scale bench**:
+The esbuild harness that generates or uses smoke `@lab/*` stubs, bundles singleton vs ESM fixtures, and writes case reports under `docs/lab/` (`benchmark-latest.*` for UC1; `-wide` / `-cycles` / `-partial` siblings for variants).
+_Avoid_: treating the docs site as the bench host; in-browser Run-N
 
-**Identity service**:
-The Cloudflare Worker at `apps/identity-service` (`@apps/identity-service`) that owns authentication (OIDC-shaped token/introspect/revoke) and account/user HTTP on one origin via Hono + D1 — the usual combined “identity” surface for demos.
-_Avoid_: separate Nest auth-service/account-service deployables, putting minting/DB inside Service SDK packages
+**Call sites vs surface**:
+`--fns` = functions *defined* per package (shakeable surface). **Call sites** = how many `used()` invocations the fixture actually performs. UC1–UC3: ESM call sites = **1**. UC4 `partial`: call sites = `--used=K` (default `⌊N/2⌋`) on both arms.
+_Avoid_: reading “fns=40” as “ESM imported 40 functions”
 
-**Auth** *(capability on Identity service)*:
-OIDC-shaped token routes under `/public/api/oauth/*` (and admin token routes).
-_Avoid_: treating auth as a separate deployable in this lab
+**Singleton service**:
+A class instance on `globalThis`, created with a default constructor, registered via singular `registerPublicService` on import, configured later by plural `registerPublicServices(cfg)`.
+_Avoid_: ambient auth tokens; Nest DI as the lab subject
 
-**Account** *(capability on Identity service)*:
-Account HTTP routes under `/public/api/v1/*` and `/admin/api/v1/admin/*`.
-_Avoid_: implementing account persistence inside account SDK packages
+**ESM stub package**:
+A `@lab/esm-svc-*` (or smoke) package with named `used` / `unused*` exports (plus namespace-shaped const) so unused exports can be shaken when only `used` is imported.
+_Avoid_: requiring a full Next app to prove the delta
 
-**Core package**:
-Shared SDK support code that exists only for Service SDKs (`packages/core/service-core`, imported as `@service/core`).
-_Avoid_: app config module, `@tns/core`
+**Findings / docs site**:
+`apps/docs` (`@apps/docs`): Fumadocs explainer (metrics home, why, run, research). Dark default + light; Nothing tokens. Home reads UC1 `benchmark-latest.json` only.
+_Avoid_: product auth demo, identity Worker
 
-**Web app**:
-The Next.js UI application at `apps/web`. Local imports use `@/`; its workspace name is `@apps/web` when a package name is required.
-_Avoid_: `@service/web`, `apps/www`
-
-**Account public**:
-The Service SDK surface for non-admin account operations (`@service/account-public`).
-_Avoid_: account-public-service (as an npm name)
-
-**Account admin**:
-The Service SDK surface for administrative account operations (`@service/account-admin`).
-_Avoid_: account-admin-service (as an npm name)
-
-**Token public**:
-The Service SDK surface for end-user JWT session operations (`@service/token-public`) — create/verify/refresh style flows for the lab.
-_Avoid_: NextAuth as the SDK name, calling this a deployable auth service
-
-**Token admin**:
-The Service SDK surface for administrative token/session operations (`@service/token-admin`).
-_Avoid_: merging admin token ops into account-admin
-
-**Auth session**:
-The safe client-visible signed-in state for the Web app (`authenticated`, account id, display name) with tokens kept only in httpOnly cookies.
-_Avoid_: NextAuth session, putting tokens in JSON or client storage
-
-**Public user**:
-Minimal account fields exposed to non-admin clients (`id`, `email`, `displayName`).
-_Avoid_: returning DOB or admin-only fields on the public SDK
-
-**Admin user**:
-Richer account record for admin clients (public fields plus e.g. date of birth, status, createdAt).
-_Avoid_: using the same type as Public user
-
-**Deployable service app**:
-A future process under `apps/*` that is deployed and talked to over the network. Out of scope for the current windwaker effort.
-_Avoid_: calling a Service SDK a deployable service
+**Lab package**:
+Workspace packages under `packages/lab/*` (`@lab/singleton-services`, smoke, generated). Generated trees are gitignored; no Nx build targets on stubs.
+_Avoid_: `@service/*` demo SDKs (removed)

@@ -15,15 +15,15 @@ behave identically here.
 
 - **Agent-first.** Route non-trivial work through the right agent (plan,
   design, test, review) instead of improvising.
-- **Plan before execute.** Non-trivial work starts with a plan — see the
+- **Plan before execute.** Non-trivial work starts with a plan: see the
   `planner` agent (and `architect` for design decisions).
-- **TDD.** Write the failing test first, then the code — see the `tdd-guide`
+- **TDD.** Write the failing test first, then the code: see the `tdd-guide`
   agent and `tdd` skill (red-green-refactor).
 - **Security-first.** Treat external and untrusted input as untrusted until
-  validated — see the `security-reviewer` agent.
+  validated: see the `security-reviewer` agent.
 - **Request-scoped auth.** Emulate Better Auth's per-request session model
   (cookies/headers → explicit bearer on outbound calls). Never ambient
-  module-level tokens; token-handling code is server-only — see
+  module-level tokens; token-handling code is server-only: see
   [`.cursor/rules/common/auth.mdc`](.cursor/rules/common/auth.mdc).
 - **Immutability (CRITICAL).** Always create new objects; never mutate
   existing ones.
@@ -68,7 +68,7 @@ issue tracker, triage labels, and domain docs this loop depends on.
 ## Releases
 
 After every merge to `main`, run the full release pipeline (semver bump,
-release branch, README, GitHub tag/release) — see
+release branch, README, GitHub tag/release): see
 [`.cursor/rules/common/release.mdc`](.cursor/rules/common/release.mdc)
 (mirrored under `.claude/rules/common/release.md`).
 
@@ -77,5 +77,5 @@ release branch, README, GitHub tag/release) — see
 Framework-specific structure and conventions for next live in
 `.cursor/rules/next/patterns.mdc` (mirrored under
 `.claude/rules/next/patterns.md`). That rule is owned by the
-Template that scaffolded this app, not by ai-harness — this file never
+Template that scaffolded this app, not by ai-harness: this file never
 duplicates it.

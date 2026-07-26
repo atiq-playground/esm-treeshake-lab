@@ -48,7 +48,7 @@ Equivalent local commands via `yarn prettier` or `npm exec prettier --` are fine
 
 ### Type Check
 
-Use `--incremental` so re-runs reuse the previous `.tsbuildinfo` (1-3s on unchanged code instead of 30-60s every time). Wrap in `timeout` so a stuck tsc gets reaped by the OS instead of accumulating across edits — this prevents the multi-process buildup that happens when edits fire faster than tsc finishes.
+Use `--incremental` so re-runs reuse the previous `.tsbuildinfo` (1-3s on unchanged code instead of 30-60s every time). Wrap in `timeout` so a stuck tsc gets reaped by the OS instead of accumulating across edits: this prevents the multi-process buildup that happens when edits fire faster than tsc finishes.
 
 ```json
 {

@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 /**
  * Sandbox provider factories keyed by the `SANDCASTLE_SANDBOX` env var.
  * Docker is the default (local dev and the AFK Action's runner). This map is
- * the single seam to extend when a cloud provider (e.g. Vercel) is needed —
+ * the single seam to extend when a cloud provider (e.g. Vercel) is needed.
  * add an entry here, nothing else in this file changes.
  */
 const SANDBOX_PROVIDERS: Record<string, (imageName?: string) => SandboxProvider> = {
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   console.log(`branch: ${result.branch}`);
   console.log(`commits: ${result.commits.length}`);
   console.log(
-    `completionSignal: ${result.completionSignal ?? "(none — hit maxIterations without one)"}`,
+    `completionSignal: ${result.completionSignal ?? "(none: hit maxIterations without one)"}`,
   );
 }
 

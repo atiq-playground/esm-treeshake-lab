@@ -1,0 +1,9 @@
+{
+  "name": "@lab/smoke-singleton-svc-1",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

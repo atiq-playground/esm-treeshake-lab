@@ -1,5 +1,5 @@
 # This app uses Vitest + Playwright via package.json scripts.
-# `bun test` is Bun's built-in runner and does NOT run those scripts —
+# `bun test` is Bun's built-in runner and does NOT run those scripts.
 # point it at a guard so a bare `bun test` fails with a clear message
 # instead of mis-executing Vitest/Playwright files.
 [test]
