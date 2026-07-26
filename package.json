@@ -10,9 +10,7 @@
     "apps/*",
     "packages/lab/*",
     "packages/lab/smoke/*",
-    "packages/lab/smoke/*/*",
-    "packages/lab/generated/singleton/*",
-    "packages/lab/generated/esm/*"
+    "packages/lab/smoke/*/*"
   ],
   "scripts": {
     "dev": "nx run @apps/docs:dev",
