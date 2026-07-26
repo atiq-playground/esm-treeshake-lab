@@ -15,7 +15,7 @@
     },
     "apps/docs": {
       "name": "@apps/docs",
-      "version": "0.0.0",
+      "version": "0.3.0",
       "dependencies": {
         "@opennextjs/cloudflare": "^1.20.2",
         "fumadocs-core": "^16.12.1",
