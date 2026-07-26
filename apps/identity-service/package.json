@@ -1,0 +1,23 @@
+{
+  "name": "@apps/identity-service",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply identity --local",
+    "db:migrate:remote": "wrangler d1 migrations apply identity --remote"
+  },
+  "dependencies": {
+    "hono": "^4.8.5",
+    "jose": "^6.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250712.0",
+    "typescript": "^5",
+    "wrangler": "4.110.0"
+  }
+}

@@ -1,0 +1,61 @@
+# dependencies (bun install)
+/node_modules
+**/node_modules/
+
+# testing
+/coverage
+/playwright-report
+/test-results
+/blob-report
+
+# next.js
+/.next/
+/apps/*/.next/
+/out/
+
+# opennextjs/cloudflare + wrangler
+/.open-next/
+/apps/*/.open-next/
+/.wrangler/
+/apps/*/.wrangler/
+cloudflare-env.d.ts
+
+# Worker local state / secrets
+/apps/identity-service/.wrangler/
+/apps/identity-service/.dev.vars
+
+# Legacy Nest sqlite (removed)
+/apps/*/data/
+
+# package build outputs
+/packages/**/dist/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug logs
+*.log
+
+# env files (can opt-in for committing if needed)
+# anchored to the root — .sandcastle/.gitignore owns .sandcastle/.env
+/.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+
+.nx/cache
+.nx/workspace-data
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+vite.config.*.timestamp*
+vitest.config.*.timestamp*

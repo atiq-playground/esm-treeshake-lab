@@ -1,0 +1,18 @@
+{
+  "type": "workspace_readwrite",
+  "networkPolicy": {
+    "default": "deny",
+    "allow": [
+      "registry.npmjs.org",
+      "registry.yarnpkg.com",
+      "github.com",
+      "api.github.com",
+      "codeload.github.com",
+      "*.githubusercontent.com"
+    ]
+  },
+  "additionalReadwritePaths": [],
+  "additionalReadonlyPaths": [],
+  "disableTmpWrite": false,
+  "enableSharedBuildCache": true
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "esm-treeshake-identity-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "OIDC_ISSUER": "https://auth.example.com",
+    "OIDC_AUDIENCE": "https://api.example.com",
+    "OIDC_CLIENT_ID": "esm-treeshake-lab-web"
+  },
+  // Set via `wrangler secret put OIDC_SIGNING_SECRET` / `OIDC_CLIENT_SECRET` in prod.
+  // Local: .dev.vars
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "identity",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

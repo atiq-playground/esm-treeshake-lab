@@ -1,0 +1,53 @@
+{
+  "name": "esm-treeshake-lab",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "bun": "1.3.14"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/core/*",
+    "packages/services/*"
+  ],
+  "scripts": {
+    "dev": "nx run @apps/web:dev",
+    "build": "nx run-many -t build",
+    "typecheck": "nx run-many -t typecheck",
+    "test": "nx run-many -t test",
+    "dev:identity": "nx run @apps/identity-service:dev",
+    "db:migrate:identity": "nx run @apps/identity-service:db:migrate:local",
+    "start": "nx run @apps/web:start",
+    "lint": "nx run @apps/web:lint",
+    "test:e2e": "nx run @apps/web:test:e2e",
+    "build:cf": "nx run @apps/web:build:cf",
+    "check:treeshake": "bash scripts/check-treeshake-markers.sh",
+    "orchestrate": "bun run .sandcastle/orchestrate.ts"
+  },
+  "devDependencies": {
+    "@ai-hero/sandcastle": "0.12.0",
+    "@nx/eslint": "21.6.11",
+    "@nx/next": "21.6.11",
+    "@nx/playwright": "21.6.11",
+    "@nx/vite": "21.6.11",
+    "@nx/web": "21.6.11",
+    "@vitest/ui": "^3.0.0",
+    "eslint": "~8.57.0",
+    "jiti": "2.4.2",
+    "nx": "21.6.11",
+    "typescript": "^5",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0"
+  },
+  "ignoreScripts": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "trustedDependencies": [
+    "sharp",
+    "unrs-resolver"
+  ],
+  "dependencies": {}
+}

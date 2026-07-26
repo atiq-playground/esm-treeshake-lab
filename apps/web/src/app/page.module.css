@@ -1,0 +1,35 @@
+.page {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-sans);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.main h1 {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+.main p {
+  font-size: 16px;
+  color: var(--foreground);
+  opacity: 0.7;
+}
+
+.main code {
+  font-family: var(--font-geist-mono);
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
