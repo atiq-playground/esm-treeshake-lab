@@ -11,6 +11,10 @@ A Nx + Bun lab that **measures** singleton-plugin packaging vs ESM selective imp
 **Focus**  
 Metrics only: bytes, unused markers, build time. No auth / identity demo.
 
+**If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.**
+
+[![Star on GitHub](https://img.shields.io/github/stars/atiq-playground/esm-treeshake-lab?style=social)](https://github.com/atiq-playground/esm-treeshake-lab)
+
 ## Layout
 
 | Path | Role |
@@ -32,14 +36,14 @@ bun run dev          # docs at http://localhost:3000
 
 Compares **global singleton plugins** (import all N → register) vs **ESM** (import only what you call). Host: **esbuild**.
 
-**Surface vs call sites:** `--fns` = functions *defined* per package. UC1–UC3 ESM still **calls 1** (`used` on svc-0). UC4 is “app needs K functions.”
+**Surface vs call sites:** `--fns` = functions *defined* per package. `--used=K` = resolvers bound (1 fn ≈ 1 field). Landing uses ~2–5/pkg, not a single toy import.
 
 | Case | Command | Surface / graph | ESM call sites | Report |
 |------|---------|-----------------|----------------|--------|
-| UC1 baseline | `lab:bench:smoke` / `lab:bench` | 2 fns/svc | **1** | `benchmark-latest.*` (home + CI) |
-| UC2 wide | `lab:bench:wide -- --n=100` | `--fns=20` (or 40) | **1** | `benchmark-wide-latest.*` |
-| UC3 cycles | `lab:bench:cycles -- --n=100` | wide + package ring | **1** (ring still pulls N modules) | `benchmark-cycles-latest.*` |
-| UC4 partial | `lab:bench:partial -- --n=100 --used=8` | `--fns` surface; needs K | **K** (default `⌊N/2⌋`) | `benchmark-partial-latest.*` |
+| UC1 baseline | `lab:bench:smoke` / `lab:bench -- --n=100 --used=200` | 2 fns/svc | **K** (landing **~2/pkg**; smoke **1**) | `benchmark-latest.*` (home + CI) |
+| UC2 wide | `lab:bench:wide -- --n=100 --used=300` | `--fns=20` | **K** (landing **~3/pkg**) | `benchmark-wide-latest.*` |
+| UC3 cycles | `lab:bench:cycles -- --n=100 --used=300` | wide + package ring | **K** (landing **~3/pkg**) | `benchmark-cycles-latest.*` |
+| UC4 partial | `lab:bench:partial -- --n=100 --used=500` | `--fns` surface; needs K | **K** (landing **~5/pkg**) | `benchmark-partial-latest.*` |
 
 **Smoke (CI): UC1 only**
 
@@ -47,21 +51,22 @@ Compares **global singleton plugins** (import all N → register) vs **ESM** (im
 bun run lab:bench:smoke
 ```
 
-**Full local**
+**Full local (landing-shaped: ~2–5 resolvers per domain package)**
 
 ```bash
-bun run lab:bench -- --n=100
-bun run lab:bench:wide -- --n=100
-bun run lab:bench:cycles -- --n=100
+# 1 fn ≈ 1 GraphQL field resolver
+bun run lab:bench -- --n=100 --used=200          # ~2/pkg (lean surface)
+bun run lab:bench:wide -- --n=100 --used=300     # ~3/pkg of ~20
+bun run lab:bench:cycles -- --n=100 --used=300
+bun run lab:bench:partial -- --n=100 --used=500  # ~5/pkg of ~20
 
-# “We only needed 8 of the API surface”
-bun run lab:bench:partial -- --n=100 --fns=40 --used=8
+# optional: shuffle which K surface fns (reproducible)
+bun run lab:bench:partial -- --n=100 --used=500 --seed=42
 
-# optional: shuffle which K packages (reproducible)
-bun run lab:bench:partial -- --n=100 --used=50 --seed=42
-
-# optional stress (see docs/research/scale-bench-n1000-bun-esbuild.md)
+# optional stress ladder (see docs/research/scale-bench-n1000-bun-esbuild.md)
 bun run lab:bench -- --n=1000
+# full N × use-case practicality sweep → docs/research/scale-bench-sweep.json
+bun run lab:probe:scale
 ```
 
 Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
@@ -90,7 +95,12 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
 | `lab:bench:wide` | UC2: many fns/svc defined (ESM still calls 1) |
 | `lab:bench:cycles` | UC3: wide + cyclic package ring |
 | `lab:bench:partial` | UC4: both arms call `--used=K` sites |
+| `lab:probe:scale` | N × UC practicality sweep → `docs/research/scale-bench-sweep.json` |
 
 ## Map
 
 Planning map (destination met): [Singleton vs ESM scale bench](https://github.com/atiq-playground/esm-treeshake-lab/issues/15).
+
+## Support
+
+If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.

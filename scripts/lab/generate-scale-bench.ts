@@ -23,8 +23,8 @@ const n = Number(argValue("--n") ?? (smoke ? "3" : "100"));
 const fns = Number(argValue("--fns") ?? "2");
 const caseName = argValue("--case") ?? (cycles ? "cycles" : fns > 2 ? "wide" : "baseline");
 
-if (!Number.isFinite(n) || n < 1 || n > 5000) {
-  console.error("Invalid --n (1..5000)");
+if (!Number.isFinite(n) || n < 1 || n > 10000) {
+  console.error("Invalid --n (1..10000)");
   process.exit(2);
 }
 if (!Number.isFinite(fns) || fns < 2 || fns > 200) {

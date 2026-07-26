@@ -15,11 +15,21 @@ export function withUtm(base: string, content: string): string {
   return url.toString();
 }
 
+/** Bare URLs (README / plain markdown). */
+export const GITHUB = {
+  repo: "https://github.com/atiq-playground/esm-treeshake-lab",
+  profile: "https://github.com/noonii",
+} as const;
+
 export const SITE_LINKS = {
   /** This project: used for fumadocs `githubUrl` (nav top-right). */
-  repo: "https://github.com/atiq-playground/esm-treeshake-lab",
+  repo: GITHUB.repo,
+  /** Repo page: Star button is top-right once signed in. */
+  star: withUtm(GITHUB.repo, "cta_star"),
+  /** Author profile: Follow button. */
+  follow: withUtm(GITHUB.profile, "cta_follow"),
   portfolio: withUtm("https://atiqrahman.work/", "nav_portfolio"),
-  githubProfile: withUtm("https://github.com/noonii", "nav_github_profile"),
+  githubProfile: withUtm(GITHUB.profile, "nav_github_profile"),
   linkedin: withUtm("https://www.linkedin.com/in/atiq-r/", "nav_linkedin"),
   x: withUtm("https://x.com/afgmantu", "nav_x"),
 } as const;

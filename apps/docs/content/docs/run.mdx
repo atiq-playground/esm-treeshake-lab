@@ -5,9 +5,9 @@ description: "CLI commands. No in-browser spawn."
 
 Copy-paste from the repo root. The docs site does **not** run the bench.
 
-Home metrics and CI always use **UC1 baseline** (`benchmark-latest.*`).
+Home chart compares **UC1–UC4** from `docs/lab/benchmark-*-latest.json`, framed as a **GraphQL service** whose schema can reach ~100 first-party domain packages. Typical bind is **~2–5 resolvers per package** (1 function ≈ 1 field resolver). CI smoke still writes **UC1 baseline** (`benchmark-latest.*`) at N=3.
 
-**Call sites:** UC1–UC3 ESM calls **1** function (`used` on svc-0). `--fns` only changes how much *unused* surface exists to shake. UC4 (`partial`) is the case where ESM (and singleton) call **`--used=K`** functions.
+**Call sites:** `--used=K` is how many surface functions the schema **binds** (same K on both arms; K may exceed N). Landing artifacts: **K=200** (~2/pkg lean), **K=300** (~3/pkg fat/cycles), **K=500** (~5/pkg many).
 
 ## Smoke (CI): UC1
 
@@ -17,34 +17,37 @@ bun run lab:bench:smoke
 
 Committed N=3 packages. esbuild + marker asserts. **ESM call sites: 1.**
 
-## Full local: UC1
+## Landing-shaped local (GraphQL)
 
 ```bash
-bun run lab:bench -- --n=100
+bun run lab:bench -- --n=100 --used=200
+bun run lab:bench:wide -- --n=100 --used=300
+bun run lab:bench:cycles -- --n=100 --used=300
+bun run lab:bench:partial -- --n=100 --used=500
 ```
 
-**ESM call sites: 1.** Optional stress: `bun run lab:bench -- --n=1000`.
+Optional stress: `bun run lab:bench -- --n=1000 --used=300`.
 
-## Variants (do not overwrite latest)
+## Variants
 
-**UC2 wide**: more functions *defined* per service (`--fns=20` default). ESM still calls **1**.
+**UC2 wide**: ~20 functions *defined* per service. Bind ~3/pkg with `--used=300`.
 
 ```bash
-bun run lab:bench:wide -- --n=100
-bun run lab:bench:wide -- --n=100 --fns=40
+bun run lab:bench:wide -- --n=100 --used=300
+bun run lab:bench:wide -- --n=100 --fns=40 --used=300
 ```
 
-**UC3 cycles**: wide + package ring on both arms. ESM still calls **1**, but the ring pulls all N modules into the graph.
+**UC3 cycles**: wide + package ring. Binding resolvers across packages that ring-link can still drag neighbors.
 
 ```bash
-bun run lab:bench:cycles -- --n=100
+bun run lab:bench:cycles -- --n=100 --used=300
 ```
 
-**UC4 partial**: app needs K of the surface. Both arms call the same K `used()` sites (default `K = ⌊N/2⌋`). Optional `--seed=` shuffles which packages (reproducible).
+**UC4 partial**: heavier schema (~5/pkg). Optional `--seed=` shuffles which surface fns (reproducible).
 
 ```bash
-bun run lab:bench:partial -- --n=100 --fns=40 --used=8
-bun run lab:bench:partial -- --n=100 --used=50 --seed=42
+bun run lab:bench:partial -- --n=100 --used=500
+bun run lab:bench:partial -- --n=100 --used=500 --seed=42
 ```
 
 ## Outputs
@@ -57,3 +60,7 @@ bun run lab:bench:partial -- --n=100 --used=50 --seed=42
 | `docs/lab/benchmark-wide-latest.*` | UC2 |
 | `docs/lab/benchmark-cycles-latest.*` | UC3 |
 | `docs/lab/benchmark-partial-latest.*` | UC4 |
+
+## Support
+
+If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.

@@ -1,7 +1,20 @@
-import reportJson from "../../../docs/lab/benchmark-latest.json";
+import baselineJson from "../../../docs/lab/benchmark-latest.json";
+import wideJson from "../../../docs/lab/benchmark-wide-latest.json";
+import cyclesJson from "../../../docs/lab/benchmark-cycles-latest.json";
+import partialJson from "../../../docs/lab/benchmark-partial-latest.json";
 import { byteParts, type ByteParts } from "./format-bytes";
+import {
+  toUseCaseComparison,
+  type UseCaseComparisonSummary,
+  type UseCaseId,
+} from "./use-case-comparison";
 
 export type { ByteParts };
+export type {
+  UseCaseComparisonRow,
+  UseCaseComparisonSummary,
+  UseCaseId,
+} from "./use-case-comparison";
 
 export type ArmMetrics = {
   bytes: number;
@@ -15,9 +28,15 @@ export type ArmMetrics = {
 export type BenchmarkReport = {
   version: number;
   timestamp: string;
+  case?: UseCaseId | string;
   n: number;
   host: string;
   mode?: string;
+  fns?: number;
+  cycles?: boolean;
+  callSites?: number;
+  surfaceFns?: number;
+  note?: string;
   arms: {
     singleton: ArmMetrics;
     esm: ArmMetrics;
@@ -34,9 +53,7 @@ export type BenchmarkReport = {
   };
 };
 
-/** Latest UC1 report: bundled at build (no runtime fs / R2). */
-export function loadBenchmarkLatest(): BenchmarkReport {
-  const report = reportJson as BenchmarkReport;
+function enrichReport(report: BenchmarkReport): BenchmarkReport {
   const saved =
     report.benefit.bytesSaved ??
     Math.max(0, report.arms.singleton.bytes - report.arms.esm.bytes);
@@ -59,4 +76,24 @@ export function loadBenchmarkLatest(): BenchmarkReport {
       sizeSaved: report.benefit.sizeSaved ?? byteParts(saved),
     },
   };
+}
+
+/** Latest UC1 report: bundled at build (no runtime fs / R2). */
+export function loadBenchmarkLatest(): BenchmarkReport {
+  return enrichReport(baselineJson as BenchmarkReport);
+}
+
+/** All four use-case artifacts, keyed by case id. */
+export function loadAllBenchmarkReports(): Record<UseCaseId, BenchmarkReport> {
+  return {
+    baseline: enrichReport(baselineJson as BenchmarkReport),
+    wide: enrichReport(wideJson as BenchmarkReport),
+    cycles: enrichReport(cyclesJson as BenchmarkReport),
+    partial: enrichReport(partialJson as BenchmarkReport),
+  };
+}
+
+/** Chart-ready comparison across UC1–UC4. */
+export function loadUseCaseComparison(): UseCaseComparisonSummary {
+  return toUseCaseComparison(loadAllBenchmarkReports());
 }

@@ -24,6 +24,7 @@
     "lab:bench:wide": "bun run scripts/lab/run-scale-bench.ts --case=wide",
     "lab:bench:cycles": "bun run scripts/lab/run-scale-bench.ts --case=cycles",
     "lab:bench:partial": "bun run scripts/lab/run-scale-bench.ts --case=partial",
+    "lab:probe:scale": "bun run scripts/lab/probe-scale-practicality.ts",
     "orchestrate": "bun run .sandcastle/orchestrate.ts"
   },
   "devDependencies": {
