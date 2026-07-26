@@ -27,6 +27,11 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: (options?: { authGated?: boolean }) => Promise<void>;
+  /**
+   * Admin-only: revoke all sessions for an account.
+   * Omitting accountId (or targeting self) signs this browser out.
+   */
+  clearSessions: (accountId?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -109,14 +114,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [account, mutate, router],
   );
 
+  const clearSessions = useCallback(
+    async (accountId?: string) => {
+      const csrf = await ensureCsrf();
+      const url = accountId
+        ? `/api/sessions?accountId=${encodeURIComponent(accountId)}`
+        : "/api/sessions";
+      const res = await fetch(url, {
+        method: "DELETE",
+        credentials: "include",
+        headers: { [CSRF_HEADER]: csrf },
+      });
+      if (!res.ok) {
+        throw new Error("clear_sessions_failed");
+      }
+      const body = (await res.json()) as { clearedSelf?: boolean };
+      if (body.clearedSelf) {
+        account.clear();
+        await mutate({ authenticated: false }, { revalidate: false });
+        router.refresh();
+      }
+    },
+    [account, mutate, router],
+  );
+
   const value = useMemo(
     () => ({
       session: data,
       isLoading,
       login,
       logout,
+      clearSessions,
     }),
-    [data, isLoading, login, logout],
+    [data, isLoading, login, logout, clearSessions],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
