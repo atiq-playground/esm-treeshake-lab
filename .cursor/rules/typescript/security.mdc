@@ -1,0 +1,27 @@
+---
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx
+alwaysApply: false
+---
+# TypeScript/JavaScript Security
+
+> This file extends [common/security.mdc](../common/security.mdc) with TypeScript/JavaScript specific content.
+
+## Secret Management
+
+```typescript
+// NEVER: Hardcoded secrets
+const someApiKey = "sk-proj-xxxxx"
+
+// ALWAYS: Encapsulate Environment variables
+const someMethod() {
+  const someApiKey = process.env.API_KEY;
+}
+
+if (!apiKey) {
+  throw new Error('API_KEY not configured')
+}
+```
+
+## Agent Support
+
+- Use **security-reviewer** skill for comprehensive security audits
