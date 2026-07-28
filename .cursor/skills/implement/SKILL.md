@@ -43,32 +43,17 @@ Run typechecking regularly, single test files regularly, and the full test suite
 
 ## 4. Review
 
-Once done, use /code-review to review the work. Capture the Review Summary table and verdict (`APPROVE`/`WARNING`/`BLOCK`, matching [`docs/agents/review/shared-standards.md`](../../../docs/agents/review/shared-standards.md)). For CRITICAL/HIGH findings fixable in-session, loop back to step 3 and fix them; only carry forward findings you consciously decide to defer.
+Once done, review the work against [RULES.md](../../../RULES.md) and the
+applicable layered rules under `.cursor/rules/`. Fix CRITICAL/HIGH issues
+in-session; only carry forward findings you consciously decide to defer.
 
 ## 5. Commit and open a PR
 
 Commit your work to the branch with conventional commits.
 
-Push, then open the PR yourself as a **draft**: always, even on a `BLOCK` verdict; the review is advisory, not a gate that withholds the PR: with `Closes #<n>` in the body, following the Pull Request Workflow in [git-workflow.mdc](../../rules/common/git-workflow.mdc): full commit history, diff against the base branch, a comprehensive summary, and a test plan.
-
-Add a one-line pointer in the PR body: `Session review: <VERDICT> (light, advisory): see comment`. Then post the full review as a PR comment via `gh pr comment`, framed as advisory and not a merge gate:
-
-```
-## Session review (light, advisory: not a merge gate)
-
-Implementer's pre-open pass via /code-review inside /implement. Authoritative
-review (full /code-review, AFK review gate, e2e) remains the gate.
-
-<Review Summary table: Severity | Count | Status>
-
-Standards: <n> findings, worst: <...>
-Spec: <n> findings, highest-impact: <... / no spec available>
-
-Verdict: <APPROVE|WARNING|BLOCK>: <one-line rationale>
-
-Deferred findings (if any):
-- <finding + why deferred>
-```
+Push, then open the PR yourself as a **draft**, with `Closes #<n>` in the
+body: full commit history, diff against the base branch, a comprehensive
+summary, and a test plan.
 
 ## 6. Clean up the worktree (mandatory if you created one)
 

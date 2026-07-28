@@ -4,7 +4,6 @@ alwaysApply: false
 ---
 # TypeScript/JavaScript Security
 
-> This file extends [common/security.mdc](../common/security.mdc) with TypeScript/JavaScript specific content.
 
 ## Secret Management
 
@@ -24,4 +23,3 @@ if (!apiKey) {
 
 ## Agent Support
 
-- Use **security-reviewer** skill for comprehensive security audits

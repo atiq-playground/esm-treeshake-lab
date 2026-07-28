@@ -4,11 +4,11 @@ You are running unattended (AFK) inside a sandboxed git worktree on branch
 `{{SOURCE_BRANCH}}`. Your work will be diffed against `{{TARGET_BRANCH}}`.
 
 This App was scaffolded by `create-atiq-app` and carries the `ai-harness`
-agent config under `.cursor/` and `.claude/`. Every agent, skill, and rule
-you need already exists there: invoke them **by name only**. Do not
-redefine, reinterpret, summarize into your own words, or work around any
-harness agent, skill, or rule; if one seems to be missing or wrong, say so
-in your final summary instead of inventing a replacement.
+config under `.cursor/` and `.claude/`. Every skill and rule you need
+already exists there: invoke them **by name only**. Do not redefine,
+reinterpret, summarize into your own words, or work around any harness
+skill or rule; if one seems to be missing or wrong, say so in your final
+summary instead of inventing a replacement.
 
 ## Issue
 
@@ -19,10 +19,9 @@ in your final summary instead of inventing a replacement.
 1. Follow the harness `/implement` skill for this issue end to end: claim
    it, work on the current branch (already checked out for you as
    `{{SOURCE_BRANCH}}`: do not create another branch or switch away from
-   it), and build test-first per the harness `tdd` skill/`tdd-guide` agent.
-2. Before finishing, run the harness `code-reviewer` agent (which delegates
-   security-sensitive scope to `security-reviewer`) against your changes and
-   address any finding you are confident is real.
+   it), and build test-first per the harness `tdd` skill.
+2. Before finishing, review your own changes against the repo rules and
+   `RULES.md`; address any finding you are confident is real.
 3. Commit your work using the project's commit convention as you go. Do not
    push or open a pull request yourself: the calling workflow pushes
    `{{SOURCE_BRANCH}}` and opens the draft PR once this run completes.

@@ -10,8 +10,6 @@ here; add only Claude-specific notes below. The hard rules are in
 The `.claude/` tree mirrors `.cursor/`; only the provider-specific details
 differ:
 
-- **Agents:** [`.claude/agents/<name>.md`](.claude/agents), identical to the
-  Cursor definitions.
 - **Skills:** [`.claude/skills/<name>/SKILL.md`](.claude/skills), identical to
   the Cursor skills.
 - **Rules:** [`.claude/rules/**/*.md`](.claude/rules), plain Markdown with no
@@ -20,5 +18,5 @@ differ:
 
 ## Mirror Parity
 
-Any agent, skill, or rule change here must be mirrored in `.cursor/`, and vice
+Any skill or rule change here must be mirrored in `.cursor/`, and vice
 versa, respecting each provider's format.

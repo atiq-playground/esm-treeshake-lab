@@ -48,6 +48,69 @@ flowchart LR
 
 [![Star on GitHub](https://img.shields.io/github/stars/atiq-playground/esm-treeshake-lab?style=social)](https://github.com/atiq-playground/esm-treeshake-lab)
 
+## The pattern (TypeScript)
+
+Same call shape — `Users.getUser` — different module graph.
+
+### ✗ Bad — live object bag
+
+```ts
+// users.ts
+export const Users = {
+  baseUrl: "",
+  configure(cfg: { baseUrl: string }) {
+    this.baseUrl = cfg.baseUrl;
+  },
+  getUser(id: string) {
+    return fetch(`${this.baseUrl}/users/${id}`);
+  },
+  updateUser(id: string, body: unknown) {
+    return fetch(`${this.baseUrl}/users/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+};
+
+// app.ts
+import { Users } from "./users";
+Users.configure({ baseUrl: "/api" });
+Users.getUser("1");
+// updateUser stays in the bundle
+```
+
+### ✓ Good — named exports + `import *`
+
+```ts
+// users.ts
+let baseUrl = "";
+
+export function configure(cfg: { baseUrl: string }) {
+  baseUrl = cfg.baseUrl;
+}
+
+export function getUser(id: string) {
+  // guards check: baseUrl set, id present
+  return fetch(`${baseUrl}/users/${id}`);
+}
+
+export function updateUser(id: string, body: unknown) {
+  // guards check: baseUrl set, id + body present
+  return fetch(`${baseUrl}/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+// app.ts
+import * as Users from "./users";
+Users.configure({ baseUrl: "/api" });
+Users.getUser("1");
+// updateUser can be tree-shaken
+```
+
+JavaScript tab (same lesson) on the docs landing page (`bun run dev` → `/`).
+
 ## Layout
 
 | Path | Role |

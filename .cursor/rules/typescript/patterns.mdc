@@ -4,7 +4,6 @@ alwaysApply: false
 ---
 # TypeScript/JavaScript Patterns
 
-> This file extends [common/patterns.mdc](../common/patterns.mdc) with TypeScript/JavaScript specific content.
 
 ## API Response Format
 

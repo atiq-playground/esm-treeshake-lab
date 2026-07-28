@@ -101,7 +101,7 @@ Same generated tree as wide. Singleton still registers all N; ESM pays only for 
 - **ESM without cycles** stays tiny and fast (hundreds of bytes, single-digit ms) even at N=10000 when the entry imports one (or eight) packages.
 - **Cycles are the ESM cliff:** the ring forces esbuild to visit all N modules. At N=10000, ESM is ~1.2MB / ~6.6s; singleton climbs to ~22s. Savings stay ~99.7% vs singleton, but wall time stops feeling interactive.
 - **Wide/partial singleton size** scales with N × fns (~40MB at N=1000, ~405MB at N=10000). That is the product-story cost of a registry that side-effect-imports everything.
-- Side-effect imports are required for the singleton arm to retain modules; pure `import { used }` of one package matches the ESM arm (both shake). Cycles need a real top-level side effect on the ring edge or esbuild DCE’s the cycle.
+- Side-effect imports are required for the singleton arm to retain modules; pure `import * as Svc0` + `Svc0.used()` of one package matches the ESM arm (both shake). Cycles need a real top-level side effect on the ring edge or esbuild DCE’s the cycle.
 
 ## Nx
 

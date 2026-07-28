@@ -1,15 +1,16 @@
 # Namespace-shaped `export const` over true `export namespace`
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-07-22
+- **Superseded:** 2026-07-27
 
 ## Context
 
-Public surfaces need dotted call sites (e.g. `Svc0.used()` / `AccountPublicService.getUser()`) and unused-member tree-shaking when only some methods are imported.
+Public surfaces wanted dotted call sites (e.g. `Svc0.used()` / `AccountPublicService.getUser()`) and unused-member tree-shaking when only some methods are used.
 
 True TypeScript `export namespace` emits an IIFE with property assignment. On Next 16.2 (Turbopack + webpack) after `tsc` → `dist/`, that shape does **not** member-tree-shake; unused markers stay in JS. See [docs/research/next-tsc-namespace-treeshaking.md](../research/next-tsc-namespace-treeshaking.md).
 
-## Decision
+## Original decision (no longer lab policy)
 
 Author ESM stubs as **named function exports** plus a **namespace-shaped `export const`**, not `export namespace`:
 
@@ -19,15 +20,32 @@ export function unused(): … { /* … */ }
 export const Svc0 = { used, unused };
 ```
 
-Smoke and the generator follow this (`packages/lab/smoke/esm/*`, `scripts/lab/generate-scale-bench.ts`).
+Empirical note (still true for Next 16.2): importing that const and calling `Svc0.used()` *can* drop unused markers under Next. Keeping the bag in stubs still invited the wrong lesson versus namespace imports over named exports.
+
+## Current decision
+
+ESM lab stubs are **named function exports only**; fixtures consume them with a **namespace import**:
+
+```ts
+// stub
+export function used(): string { /* … */ }
+export function unused(): … { /* … */ }
+
+// consumer (bench)
+import * as Svc0 from "@lab/esm-svc-0";
+Svc0.used();
+```
+
+That keeps dotted `Svc0.used()` / `Users.getUser()` call sites while remaining member-tree-shakable. Not a prebuilt `export const Users = { … }` object bag.
 
 ## Considered options
 
 - **True `export namespace`**: honest TS keyword; fails unused-member shake-out on Next 16.2 (Turbopack + webpack).
-- **Namespace-shaped `export const` (chosen)**: same dotted call site; shake-out passes marker search.
-- **Named exports only**: shakeable, but drops the dotted `SvcN.used()` / `AccountPublicService.getUser()` API.
+- **Namespace-shaped `export const`**: can pass Next marker search when calling through the object; removed from lab stubs so the measured API is unambiguously named exports.
+- **Named exports + `import * as` (chosen)**: dotted call sites on the consumer; clearest shakable surface without an object bag.
 
 ## Consequences
 
-- Prior “single-file `export namespace`” wording in [Lock account SDK demo API](https://github.com/atiq-playground/esm-treeshake-lab/issues/2) is superseded for **emit**; dotted call sites remain via the const object.
-- Re-prove with the Next `.next/**/*.js` marker search (exclude maps) whenever shake-out needs checking on a new Next/bundler version — see the research note.
+- Smoke + `scripts/lab/generate-scale-bench.ts` no longer emit `export const SvcN = { … }`.
+- Fixtures / multi-call / fleet ESM entries use `import * as SvcN` then `SvcN.used()` (and other bound members).
+- Research note on Next + `tsc` namespaces remains useful for the emit comparison.

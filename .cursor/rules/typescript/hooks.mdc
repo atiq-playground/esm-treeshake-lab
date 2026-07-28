@@ -4,7 +4,6 @@ alwaysApply: false
 ---
 # TypeScript/JavaScript Hooks
 
-> This file extends [common/hooks.mdc](../common/hooks.mdc) with TypeScript/JavaScript specific content.
 
 ## PostToolUse Hooks
 

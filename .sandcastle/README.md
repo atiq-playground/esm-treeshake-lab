@@ -1,6 +1,6 @@
 # `.sandcastle/`
 
-Configuration for running this App's `ai-harness` agents unattended (AFK)
+Configuration for running this App's `ai-harness` AFK loop unattended
 inside a [Sandcastle](https://github.com/mattpocock/sandcastle) sandbox.
 Docker is the default sandbox runtime; `orchestrate.ts` keeps the provider
 choice behind a single seam (`SANDCASTLE_SANDBOX` / `resolveSandboxProvider`)
@@ -10,7 +10,7 @@ so a cloud provider can be swapped in later without touching call sites.
 | --- | --- |
 | `Dockerfile` | Sandbox image: Node + git + `gh` + Claude Code CLI + Bun + Playwright OS deps + non-root `agent` user |
 | `.env.example` | Token placeholders: copy to `.env` (gitignored) and fill in for local runs |
-| `prompt.md` | Agent instructions: references harness agents/skills (`/implement`, `code-reviewer`, …) by name only |
+| `prompt.md` | Agent instructions: references harness skills (`/implement`, `tdd`, …) by name only |
 | `orchestrate.ts` | AFK runner: `bun run orchestrate <issue-number>` |
 | `orchestrate.test.ts` | Unit tests for the pure `buildRunOptions`/`resolveSandboxProvider` seam |
 

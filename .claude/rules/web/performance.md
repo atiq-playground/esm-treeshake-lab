@@ -10,7 +10,6 @@ paths:
   - "**/*.vue"
   - "**/*.svelte"
 ---
-> This file extends [common/performance.md](../common/performance.md) with web-specific performance content.
 
 # Web Performance Rules
 
