@@ -83,6 +83,7 @@ Compares **global singleton plugins** (import all N → register) vs **ESM** (im
 | Real npm 3p | `lab:bench:thirdparty:real -- --n=100` | pinned graphql + unused SDK extras | **1** (svc-0) | `benchmark-thirdparty-real-latest.*` |
 | Multi-consumer fleet | `lab:bench:fleet -- --n=50 --consumers=100` | UC1 × M (naive + shared multi-entry) | **1** per app | `benchmark-fleet-latest.*` |
 | Cold start / RSS | `lab:bench:coldstart` (default **N=50**) | Node import ms + RSS | generated fixtures | `benchmark-coldstart-latest.*` |
+| Realistic GraphQL pipeline | `lab:bench:realistic` (+ `lab:bench:request`; GHA `lab-realistic-bench`) | cycles + real 3p; ~10 call sites/pkg | **1000** (even, no `--seed`) | `benchmark-realistic-latest.*` |
 
 **Smoke (CI only): UC1 N=3 — asserts, no published overwrite**
 
@@ -132,6 +133,9 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1). Smoke / 
 | `docs/lab/benchmark-thirdparty-real-latest.*` | Real pinned npm 3p |
 | `docs/lab/benchmark-fleet-latest.*` | Fleet naive ×M + shared multi-entry |
 | `docs/lab/benchmark-coldstart-latest.*` | Node cold import + RSS |
+| `docs/lab/benchmark-realistic-latest.*` | Realistic GraphQL pipeline + request (GHA proof) |
+
+**Realistic Last verified:** Not verified yet — run `lab-realistic-bench` workflow
 
 ## Scripts
 
@@ -151,11 +155,15 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1). Smoke / 
 | `lab:bench:thirdparty:real` | Real pinned npm 3p (`--3p=real`: graphql + SDK extras) |
 | `lab:bench:fleet` | Multi-consumer fleet (`--fleet-mode=both`: naive ×M + shared) |
 | `lab:bench:coldstart` | Node cold import + RSS (default N=50; `--n=3` smoke → tmp only) |
+| `lab:bench:realistic` | Realistic GraphQL-shaped preset (cycles + real 3p; sibling report) |
+| `lab:bench:request` | Node HTTP request-time load against realistic bundles |
 | `lab:probe:scale` | N × UC practicality sweep → `docs/research/scale-bench-sweep.json` |
 
 ## Map
 
 Planning map (destination met): [Singleton vs ESM scale bench](https://github.com/atiq-playground/esm-treeshake-lab/issues/15).
+
+Realistic GraphQL pipeline bench: [#35](https://github.com/atiq-playground/esm-treeshake-lab/issues/35).
 
 ## Support
 

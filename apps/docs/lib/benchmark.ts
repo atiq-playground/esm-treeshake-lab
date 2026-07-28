@@ -6,6 +6,7 @@ import thirdpartyJson from "../../../docs/lab/benchmark-thirdparty-latest.json";
 import thirdpartyRealJson from "../../../docs/lab/benchmark-thirdparty-real-latest.json";
 import fleetJson from "../../../docs/lab/benchmark-fleet-latest.json";
 import coldstartJson from "../../../docs/lab/benchmark-coldstart-latest.json";
+import realisticJson from "../../../docs/lab/benchmark-realistic-latest.json";
 import { byteParts, type ByteParts } from "./format-bytes";
 import {
   toUseCaseComparison,
@@ -102,6 +103,59 @@ export type BenchmarkReport = {
     rssSizeSaved?: ByteParts;
   };
   fleet?: FleetTotals;
+  pipeline?: RealisticPipelineReport | null;
+  proof?: RealisticProof | null;
+  request?: RealisticRequestReport | null;
+};
+
+export type PipelineArmTimings = {
+  generateMs: number;
+  installMs: number;
+  bundleMs: number;
+  artifactBytes: number;
+  artifactUploadMs: number | null;
+  pipelineTotalMs: number;
+};
+
+export type RealisticPipelineReport = {
+  warm: { singleton: PipelineArmTimings; esm: PipelineArmTimings } | null;
+  cold: { singleton: PipelineArmTimings; esm: PipelineArmTimings } | null;
+};
+
+export type RealisticProof = {
+  timestamp: string;
+  githubRunUrl: string | null;
+  githubRunId: string | null;
+  runner: "github-actions" | "local";
+};
+
+export type RealisticRequestArm = {
+  warmup: number;
+  measured: number;
+  concurrency: number;
+  latencyMs: { p50: number; p95: number };
+  cpuUserMs: number;
+  cpuSystemMs: number;
+  rssBytes: number;
+  heapUsedBytes: number;
+};
+
+export type RealisticRequestReport = {
+  singleton: RealisticRequestArm;
+  esm: RealisticRequestArm;
+  disclaimer: string;
+};
+
+export type RealisticVerifiedSummary = {
+  verified: boolean;
+  emptyMessage: string;
+  lastVerified: string | null;
+  githubRunUrl: string | null;
+  bytesSavedPct: number | null;
+  coldPipelineTotalMs: { singleton: number; esm: number } | null;
+  warmPipelineTotalMs: { singleton: number; esm: number } | null;
+  requestP95Ms: { singleton: number; esm: number } | null;
+  reportMdHref: string;
 };
 
 function enrichFleetMode(fleet: FleetModeTotals): FleetModeTotals {
@@ -199,6 +253,60 @@ export function loadExtendedBenchmarkReports(): {
     thirdpartyReal: enrichReport(thirdpartyRealJson as BenchmarkReport),
     fleet: enrichReport(fleetJson as BenchmarkReport),
     coldstart: enrichReport(coldstartJson as BenchmarkReport),
+  };
+}
+
+/** Realistic GraphQL pipeline report (committed JSON; may be unverified stub). */
+export function loadRealisticBenchmarkReport(): BenchmarkReport {
+  return enrichReport(realisticJson as BenchmarkReport);
+}
+
+const REALISTIC_EMPTY =
+  "Not verified yet — run `lab-realistic-bench` workflow";
+
+/**
+ * Research / README surface: Last verified from committed proof only.
+ * No live Actions API; homepage must not use this.
+ */
+export function loadRealisticVerifiedSummary(): RealisticVerifiedSummary {
+  const report = loadRealisticBenchmarkReport();
+  const proof = report.proof ?? null;
+  const verified =
+    proof != null &&
+    proof.runner === "github-actions" &&
+    typeof proof.timestamp === "string" &&
+    proof.timestamp.length > 0;
+
+  const cold = report.pipeline?.cold ?? null;
+  const warm = report.pipeline?.warm ?? null;
+  const request = report.request ?? null;
+
+  return {
+    verified,
+    emptyMessage: REALISTIC_EMPTY,
+    lastVerified: verified ? proof.timestamp : null,
+    githubRunUrl: verified ? (proof.githubRunUrl ?? null) : null,
+    bytesSavedPct: verified ? (report.benefit.bytesSavedPct ?? null) : null,
+    coldPipelineTotalMs: verified && cold
+      ? {
+          singleton: cold.singleton.pipelineTotalMs,
+          esm: cold.esm.pipelineTotalMs,
+        }
+      : null,
+    warmPipelineTotalMs: verified && warm
+      ? {
+          singleton: warm.singleton.pipelineTotalMs,
+          esm: warm.esm.pipelineTotalMs,
+        }
+      : null,
+    requestP95Ms: verified && request
+      ? {
+          singleton: request.singleton.latencyMs.p95,
+          esm: request.esm.latencyMs.p95,
+        }
+      : null,
+    reportMdHref:
+      "https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-realistic-latest.md",
   };
 }
 

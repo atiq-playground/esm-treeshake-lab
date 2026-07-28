@@ -23,9 +23,17 @@ UC1–UC4 deliberately omit real npm deps on the home chart. Sibling benches add
 
 Artifacts: [thirdparty](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-thirdparty-latest.md), [thirdparty-real](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-thirdparty-real-latest.md), [fleet](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-fleet-latest.md), [coldstart](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-coldstart-latest.md). Notes: [docs/research/thirdparty-fleet-datapoints.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/thirdparty-fleet-datapoints.md). CI stays UC1 smoke (tmp only).
 
+## Realistic GraphQL pipeline (GHA)
+
+On-demand proof for a GraphQL-shaped graph (`N=100`, `--fns=20`, `--used=1000`, cycles + real npm 3p): cold + warm pipeline timings and Node request-time load. Homepage stays on UC1 — this section only.
+
+Trigger: Actions → **Lab realistic bench** (`workflow_dispatch`). Report: [benchmark-realistic-latest.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-realistic-latest.md). Map: [#35](https://github.com/atiq-playground/esm-treeshake-lab/issues/35).
+
+<RealisticBenchSummary />
+
 ## Next + tsc namespaces
 
-[docs/research/next-tsc-namespace-treeshaking.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/next-tsc-namespace-treeshaking.md) and [ADR 0001](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/adr/0001-namespace-shaped-const-over-export-namespace.md): why namespace-shaped `export const` beats TypeScript `export namespace` for member shake-out under Next.
+[docs/research/next-tsc-namespace-treeshaking.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/next-tsc-namespace-treeshaking.md): Next 16.2 member shake-out matrix (`export namespace` IIFE fails; named exports / some const shapes pass). Lab stubs use **named exports** + fixtures use **`import * as SvcN`** — [ADR 0001](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/adr/0001-namespace-shaped-const-over-export-namespace.md) (superseded: no namespace-shaped `export const` in stubs).
 
 ## Support
 

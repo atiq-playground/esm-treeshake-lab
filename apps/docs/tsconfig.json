@@ -39,6 +39,7 @@
     ".source/**/*.ts",
     ".next/dev/types/**/*.ts",
     "../../docs/lab/benchmark-latest.json",
+    "../../docs/lab/benchmark-realistic-latest.json",
     "../../docs/research/scale-bench-sweep.json"
   ],
   "exclude": [

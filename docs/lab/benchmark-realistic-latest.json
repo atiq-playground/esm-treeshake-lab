@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "timestamp": "",
+  "case": "realistic",
+  "n": 100,
+  "fns": 20,
+  "cycles": true,
+  "callSites": 1000,
+  "surfaceFns": 2000,
+  "host": "esbuild",
+  "mode": "unverified",
+  "note": "Placeholder until lab-realistic-bench workflow publishes a proof PR.",
+  "arms": {
+    "singleton": {
+      "bytes": 0,
+      "buildMs": 0,
+      "markersUsedPresent": 0,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 0,
+      "thirdPartyMarkersRetained": 0
+    },
+    "esm": {
+      "bytes": 0,
+      "buildMs": 0,
+      "markersUsedPresent": 0,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 0,
+      "thirdPartyMarkersRetained": 0
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 0,
+    "bytesSaved": 0
+  },
+  "pipeline": {
+    "warm": null,
+    "cold": null
+  },
+  "proof": null,
+  "request": null,
+  "methodologyLimits": "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy."
+}
