@@ -1,0 +1,118 @@
+name: Lab realistic bench
+
+# On-demand GraphQL-shaped pipeline + request proof. Human merges the PR.
+# Does not run on push/PR and does not hook into ci.yml / deploy.yml.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  realistic-bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+
+      - name: Cold pipeline (no Bun cache)
+        run: |
+          rm -rf ~/.bun/install/cache
+          bun install --frozen-lockfile
+          bun run lab:bench:realistic -- --pipeline-cache=cold
+
+      - name: Warm pipeline (Bun cache)
+        run: |
+          bun install --frozen-lockfile
+          bun run lab:bench:realistic -- --pipeline-cache=warm
+
+      - name: Request load
+        run: bun run lab:bench:request
+
+      - name: Stamp proof from GITHUB_*
+        run: |
+          bun -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { buildProofFromEnv } from "./scripts/lab/bench-metrics.ts";
+            const path = "docs/lab/benchmark-realistic-latest.json";
+            const report = JSON.parse(readFileSync(path, "utf8"));
+            const proof = buildProofFromEnv(process.env);
+            const next = { ...report, proof };
+            writeFileSync(path, JSON.stringify(next, null, 2) + "\n");
+            console.log(JSON.stringify(proof, null, 2));
+          '
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: realistic-bench-report
+          path: |
+            docs/lab/benchmark-realistic-latest.json
+            docs/lab/benchmark-realistic-latest.md
+
+      - name: Upload bundles artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: realistic-bench-bundles
+          path: |
+            tmp/lab-bench/singleton-realistic.js
+            tmp/lab-bench/esm-realistic.js
+
+      - name: Open proof PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/realistic-bench-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Refresh README Last verified from proof (no hard-coded date in source).
+          bun -e '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const report = JSON.parse(readFileSync("docs/lab/benchmark-realistic-latest.json", "utf8"));
+            const proof = report.proof ?? {};
+            const line = proof.githubRunUrl
+              ? `**Realistic Last verified:** ${proof.timestamp} ([run](${proof.githubRunUrl}))`
+              : "**Realistic Last verified:** Not verified yet — run \`lab-realistic-bench\` workflow";
+            let readme = readFileSync("README.md", "utf8");
+            if (readme.includes("**Realistic Last verified:**")) {
+              readme = readme.replace(/\*\*Realistic Last verified:\*\*[^\n]*/, line);
+            } else {
+              readme = readme.replace(
+                /(## Map\n)/,
+                `${line}\n\n$1`,
+              );
+            }
+            writeFileSync("README.md", readme);
+          '
+
+          git checkout -b "$BRANCH"
+          git add \
+            docs/lab/benchmark-realistic-latest.json \
+            docs/lab/benchmark-realistic-latest.md \
+            README.md
+          git commit -m "chore: realistic bench proof from GHA run ${GITHUB_RUN_ID}"
+          git push -u origin "$BRANCH"
+
+          gh pr create \
+            --title "chore: realistic GraphQL bench proof (run ${GITHUB_RUN_ID})" \
+            --body "$(cat <<EOF
+          ## Summary
+          - On-demand \`lab-realistic-bench\` proof for cold + warm pipeline and request-time metrics
+          - Updates \`docs/lab/benchmark-realistic-latest.*\` and README Last verified
+          - Human merge only — does not push to \`main\`
+
+          ## Test plan
+          - [ ] Review \`docs/lab/benchmark-realistic-latest.md\` pipeline + request tables
+          - [ ] Confirm \`proof.runner\` is \`github-actions\` and run URL matches this workflow
+          - [ ] After merge, Research / README show Last verified from committed JSON
+
+          Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+          )"
