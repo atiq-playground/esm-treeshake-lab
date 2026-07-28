@@ -23,9 +23,9 @@ export default async function HomePage() {
 
   return (
     <HomeLayout {...baseOptions()}>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6 py-16">
-        <header className="flex flex-col gap-3">
-          <p className="lab-label">GraphQL service bundle</p>
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-14 px-6 py-16">
+        <header className="flex flex-col gap-4">
+          <h1 className="lab-brand">ESM TREE-SHAKE LAB</h1>
           <p
             className={
               isRange ? "lab-hero-number lab-hero-range" : "lab-hero-number"
@@ -52,109 +52,41 @@ export default async function HomePage() {
               </>
             )}
           </p>
-          <p className="lab-mono text-sm text-[color:var(--text-primary)]">
-            Biggest win: dropped {peak.sizeSavedPrimary} (
-            {peak.plainTitle.toLowerCase()})
-          </p>
-          <p className="text-[length:var(--body)] text-[color:var(--text-secondary)]">
+          <p className="text-[length:var(--body)] text-[color:var(--text-primary)]">
             Same K call sites. Different bag.
           </p>
         </header>
 
-        <section className="flex flex-col gap-6">
-          <div className="flex max-w-xl flex-col gap-2 text-[length:var(--body)] leading-relaxed text-[color:var(--text-primary)]">
-            <p>
-              A GraphQL façade that <em>can</em> reach ~100 first-party domain
-              packages. One packaging style side-effect-imports a registry hub —
-              every box loads, every export stays live. The other imports only
-              the resolvers you bind.{" "}
-              <Link href="/docs/why">Why</Link>.
-            </p>
-            <p className="text-[length:var(--caption)] text-[color:var(--text-secondary)]">
-              Stub packages only — not real{" "}
-              <code className="lab-mono text-xs">graphql</code>, ORMs, or auth
-              SDKs. The chart below is the first-party module graph. Quick facts
-              also cite measured stub third-party ballast and a 100-consumer
-              fleet (×M, not a shared chunk); see{" "}
-              <Link href="/docs/research">Research</Link>.
-            </p>
-          </div>
-
+        <section className="flex flex-col gap-8">
           <PackagingMetaphor
             singletonSize={peak.singletonPrimary}
             esmSize={peak.esmPrimary}
             factor={peakFactor}
             caseTitle={peak.plainTitle}
           />
-
           <CycleRingMetaphor />
         </section>
 
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-6">
-            <p className="lab-label sm:shrink-0">
-              How heavy is the Worker / deploy artifact
-            </p>
-            <p className="lab-mono min-w-0 flex-1 text-[length:var(--caption)] text-[color:var(--text-secondary)] sm:text-right">
-              Linear KB. Tiny greens get a stub so you can see them — label is
-              the real size.
-            </p>
-          </div>
+        <section className="flex flex-col gap-3">
+          <p className="lab-label">Worker / deploy artifact</p>
           <UseCaseComparisonChart rows={comparison.rows} />
-          <ul className="grid gap-4">
-            {comparison.rows.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-col gap-1 border-b border-[color:var(--border-visible)] py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
-              >
-                <div className="flex flex-col gap-1">
-                  <span className="lab-label">{row.plainTitle}</span>
-                  <span className="max-w-md text-[length:var(--caption)] text-[color:var(--text-secondary)]">
-                    {row.plainBlurb}
-                  </span>
-                </div>
-                <span className="lab-mono text-sm text-[color:var(--text-primary)] sm:text-right">
-                  {row.singletonPrimary} → {row.esmPrimary}
-                  <br />
-                  <span className="text-[color:var(--text-secondary)]">
-                    {row.bytesSavedPct}% smaller · {row.plainMeta}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
         </section>
 
         <QuickFacts summary={quickFacts} />
 
-        <section className="flex flex-col gap-4">
-          <p className="lab-label">Try it yourself</p>
-          <ol className="list-decimal space-y-2 pl-5 text-[length:var(--body)] text-[color:var(--text-primary)]">
-            <li>Clone the repo.</li>
-            <li>
-              Quick check:{" "}
-              <code className="lab-mono text-sm">bun run lab:bench:smoke</code>
-            </li>
-            <li>
-              Landing-shaped run (~3 resolvers/package):{" "}
-              <code className="lab-mono text-sm">
-                bun run lab:bench:wide -- --n=100 --used=300
-              </code>
-            </li>
-            <li>
-              More stories on <Link href="/docs/run">Run</Link>. Deep dive on{" "}
-              <Link href="/docs/why">Why</Link>.
-            </li>
-          </ol>
+        <section className="flex flex-col gap-3">
+          <p className="lab-label">Try it</p>
+          <p className="lab-mono text-sm text-[color:var(--text-primary)]">
+            bun run lab:bench:wide -- --n=100 --used=300
+          </p>
+          <p className="lab-label">
+            <Link href="/docs/why">Why</Link>
+            {" · "}
+            <Link href="/docs/run">Run</Link>
+            {" · "}
+            <Link href="/docs/research">Research</Link>
+          </p>
         </section>
-
-        <p className="lab-label">
-          <Link href="/docs/why">Why</Link>
-          {" · "}
-          <Link href="/docs/run">Run</Link>
-          {" · "}
-          <Link href="/docs/research">Research</Link>
-        </p>
 
         <SupportCta />
 

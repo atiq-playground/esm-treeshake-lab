@@ -89,12 +89,41 @@ body {
   color: var(--text-secondary);
 }
 
+.lab-brand {
+  font-family: var(--font-mono);
+  font-size: clamp(1.125rem, 0.9rem + 1.2vw, 1.5rem);
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-display);
+}
+
 .lab-label {
   font-family: var(--font-mono);
   font-size: var(--label);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+/* Packaging metaphor: soft panel entrance */
+@keyframes lab-metaphor-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lab-metaphor {
+  animation: lab-metaphor-in 0.5s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-metaphor {
+    animation: none;
+  }
 }
 
 .lab-mono {

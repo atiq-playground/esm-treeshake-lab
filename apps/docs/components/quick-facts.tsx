@@ -56,7 +56,7 @@ export function QuickFacts({ summary, compact = false }: Props) {
           Quick facts
         </h2>
         <p className="lab-mono text-[length:var(--caption)] text-[color:var(--text-secondary)] sm:text-right">
-          What teams lose with a registry — measured, then scaled to N=500–1000+
+          Measured · extrapolated · operator feel
         </p>
       </div>
 
@@ -65,20 +65,6 @@ export function QuickFacts({ summary, compact = false }: Props) {
           <FactCard key={fact.id} fact={fact} />
         ))}
       </ul>
-
-      <p className="text-[length:var(--caption)] leading-relaxed text-[color:var(--text-secondary)]">
-        {data.scopeNote} Badge legend:{" "}
-        <span className="lab-fact-badge lab-fact-badge-measured">Measured</span>{" "}
-        lab esbuild ·{" "}
-        <span className="lab-fact-badge lab-fact-badge-extrapolated">
-          Extrapolated
-        </span>{" "}
-        linear in N ·{" "}
-        <span className="lab-fact-badge lab-fact-badge-operator">
-          Operator feel
-        </span>{" "}
-        not a lab host metric.
-      </p>
     </section>
   );
 }
