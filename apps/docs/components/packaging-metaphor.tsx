@@ -5,7 +5,7 @@ type Props = {
   esmSize: string;
   /** Size factor, e.g. 9.3 — drives honest bag area */
   factor: number;
-  /** Short case name for the caption, e.g. "Fat domain modules" */
+  /** Short case name for the caption, e.g. "Wide module surface" */
   caseTitle: string;
 };
 
@@ -215,6 +215,39 @@ function SubgraphFrame({
   );
 }
 
+/** Inline chevron so color always matches stroke (no grey/default marker). */
+function ArrowHead({
+  x,
+  y,
+  angle,
+  fill,
+  size = 7,
+}: {
+  x: number;
+  y: number;
+  angle: number;
+  fill: string;
+  size?: number;
+}) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const back = size;
+  const half = size * 0.55;
+  const bx = x - cos * back;
+  const by = y - sin * back;
+  const p1x = bx + -sin * half;
+  const p1y = by + cos * half;
+  const p2x = bx - -sin * half;
+  const p2y = by - cos * half;
+  return (
+    <path
+      d={`M ${x} ${y} L ${p1x} ${p1y} L ${p2x} ${p2y} Z`}
+      fill={fill}
+      stroke="none"
+    />
+  );
+}
+
 function Arrow({
   x1,
   y1,
@@ -230,18 +263,74 @@ function Arrow({
   stroke: string;
   dashed?: boolean;
 }) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  // Shorten the shaft so the tip sits on (x2,y2), not under the head
+  const tipBack = 1;
+  const shaftX2 = x2 - Math.cos(angle) * tipBack;
+  const shaftY2 = y2 - Math.sin(angle) * tipBack;
+
   return (
-    <line
-      x1={x1}
-      y1={y1}
-      x2={x2}
-      y2={y2}
-      stroke={stroke}
-      strokeWidth={1.25}
-      strokeOpacity={dashed ? 0.7 : 0.5}
-      strokeDasharray={dashed ? "5 4" : undefined}
-      markerEnd={dashed ? "url(#arrow-dash)" : "url(#arrow-solid)"}
-    />
+    <g>
+      <line
+        x1={x1}
+        y1={y1}
+        x2={shaftX2}
+        y2={shaftY2}
+        stroke={stroke}
+        strokeWidth={1.25}
+        strokeOpacity={dashed ? 0.7 : 0.55}
+        strokeDasharray={dashed ? "5 4" : undefined}
+      />
+      <ArrowHead x={x2} y={y2} angle={angle} fill={stroke} />
+    </g>
+  );
+}
+
+/**
+ * Mermaid-style fan-in: shafts meet at a junction, then ONE colored arrow
+ * into the bag. Avoids stacked marker diamonds at the merge point.
+ */
+function FanInArrow({
+  sources,
+  targetX,
+  targetY,
+  stroke,
+}: {
+  sources: ReadonlyArray<{ x: number; y: number }>;
+  targetX: number;
+  targetY: number;
+  stroke: string;
+}) {
+  const joinX = targetX - 22;
+  const joinY = targetY;
+  const angle = 0; // LR into bag
+
+  return (
+    <g>
+      {sources.map((s, i) => (
+        <line
+          key={i}
+          x1={s.x}
+          y1={s.y}
+          x2={joinX}
+          y2={joinY}
+          stroke={stroke}
+          strokeWidth={1.25}
+          strokeOpacity={0.5}
+        />
+      ))}
+      <circle cx={joinX} cy={joinY} r={2.75} fill={stroke} opacity={0.9} />
+      <line
+        x1={joinX}
+        y1={joinY}
+        x2={targetX - 1}
+        y2={targetY}
+        stroke={stroke}
+        strokeWidth={1.35}
+        strokeOpacity={0.65}
+      />
+      <ArrowHead x={targetX} y={targetY} angle={angle} fill={stroke} size={8} />
+    </g>
   );
 }
 
@@ -311,6 +400,7 @@ export function PackagingMetaphor({
   const sBagY = singletonY + (singletonH - bags.singletonH) / 2 + 6;
   const sBagCx = sBagX + bags.singletonW / 2;
   const sBagCy = sBagY + bags.singletonH / 2;
+  const sBagEdgeYs = bagEdgeYs(sBagY, bags.singletonH, sPkgYs.length);
 
   // ESM vertical layout
   const ePkgYs = [esmY + 52, esmY + 104, esmY + 156];
@@ -319,6 +409,7 @@ export function PackagingMetaphor({
   const eBagY = esmY + (esmH - bags.esmH) / 2 + 6;
   const eBagCx = eBagX + bags.esmW / 2;
   const eBagCy = eBagY + bags.esmH / 2;
+  const eBagEdgeYs = bagEdgeYs(eBagY, bags.esmH, ePkgYs.length);
 
   const importLabels = ["import used()", "import used()", "…K call sites"];
   const pkgLabelsS = ["pkg 1", "pkg 2", "pkg N"];
@@ -343,31 +434,6 @@ export function PackagingMetaphor({
           aria-label={`Flowchart LR: schema binds call sites. Singleton arm ships ${singletonSize}; ESM arm ships ${esmSize} — about ${factorText} smaller.`}
           className="mx-auto h-auto w-full min-w-[720px] max-w-6xl"
         >
-          <defs>
-            <marker
-              id="arrow-solid"
-              viewBox="0 0 10 10"
-              refX={9}
-              refY={5}
-              markerWidth={6}
-              markerHeight={6}
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-disabled)" />
-            </marker>
-            <marker
-              id="arrow-dash"
-              viewBox="0 0 10 10"
-              refX={9}
-              refY={5}
-              markerWidth={6}
-              markerHeight={6}
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-secondary)" />
-            </marker>
-          </defs>
-
           {/* ── APP subgraph (left) ── */}
           <SubgraphFrame
             x={appX}
@@ -403,7 +469,7 @@ export function PackagingMetaphor({
             y={schemaY + 52}
             textAnchor="middle"
             fill="var(--text-secondary)"
-            fontSize={9}
+            fontSize={10}
             fontFamily="var(--font-sans)"
           >
             ~2–5 resolvers / package
@@ -415,7 +481,7 @@ export function PackagingMetaphor({
             y1={schemaCy - 24}
             x2={armX - ARROW_GAP}
             y2={sEntryCy}
-            stroke="var(--accent)"
+            tone="accent"
             dashed
           />
           <text
@@ -435,7 +501,7 @@ export function PackagingMetaphor({
             y1={schemaCy + 24}
             x2={armX - ARROW_GAP}
             y2={esmY + esmH / 2 + 4}
-            stroke="var(--success)"
+            tone="success"
             dashed
           />
           <text
@@ -553,17 +619,16 @@ export function PackagingMetaphor({
             />
           ))}
 
-          {/* pkgs → bag */}
-          {sPkgYs.map((py, i) => (
-            <Arrow
-              key={`s-out-${i}`}
-              x1={pkgColX + PKG_BOX_W}
-              y1={py + PKG_BOX_H / 2}
-              x2={sBagX - ARROW_GAP}
-              y2={sBagCy}
-              stroke="var(--accent)"
-            />
-          ))}
+          {/* pkgs → bag (fan-in: one colored head) */}
+          <FanInArrow
+            sources={sPkgYs.map((py) => ({
+              x: pkgColX + PKG_BOX_W,
+              y: py + PKG_BOX_H / 2,
+            }))}
+            targetX={sBagX}
+            targetY={sBagCy}
+            stroke="var(--accent)"
+          />
 
           {/* Huge BAG node */}
           <rect
@@ -603,10 +668,9 @@ export function PackagingMetaphor({
             x={sBagCx}
             y={sBagCy + 28}
             textAnchor="middle"
-            fill="var(--accent)"
-            fontSize={8}
+            fill="var(--text-secondary)"
+            fontSize={9}
             fontFamily="var(--font-mono)"
-            opacity={0.8}
           >
             huge
           </text>
@@ -662,16 +726,19 @@ export function PackagingMetaphor({
                 liveFill="var(--success)"
                 label={pkgLabelsE[i]!}
               />
-
-              <Arrow
-                x1={pkgColX + PKG_BOX_W}
-                y1={py + PKG_BOX_H / 2}
-                x2={eBagX - ARROW_GAP}
-                y2={eBagCy}
-                stroke="var(--success)"
-              />
             </g>
           ))}
+
+          {/* pkgs → bag (fan-in: one colored head) */}
+          <FanInArrow
+            sources={ePkgYs.map((py) => ({
+              x: pkgColX + PKG_BOX_W,
+              y: py + PKG_BOX_H / 2,
+            }))}
+            targetX={eBagX}
+            targetY={eBagCy}
+            stroke="var(--success)"
+          />
 
           {/* Thin BAG node */}
           <rect
