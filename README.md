@@ -1,7 +1,7 @@
 # ESM tree-shake lab
 
 [![CI](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/atiq-playground/esm-treeshake-lab?label=release)](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.5.0)
+[![Release](https://img.shields.io/github/v/release/atiq-playground/esm-treeshake-lab?label=release)](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.6.0)
 [![Bun](https://img.shields.io/badge/bun-1.3.14-fbf0df?logo=bun&logoColor=f472b6)](package.json)
 [![License](https://img.shields.io/github/license/atiq-playground/esm-treeshake-lab)](LICENSE)
 
