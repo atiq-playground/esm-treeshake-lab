@@ -20,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <HomeLayout {...baseOptions()}>
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-14 px-6 py-16">
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-14 px-6 py-16">
         <header className="flex flex-col gap-4">
           <h1 className="lab-brand">ESM TREE-SHAKE LAB</h1>
           <p
