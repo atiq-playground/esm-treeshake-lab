@@ -135,7 +135,7 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1). Smoke / 
 | `docs/lab/benchmark-coldstart-latest.*` | Node cold import + RSS |
 | `docs/lab/benchmark-realistic-latest.*` | Realistic GraphQL pipeline + request (GHA proof) |
 
-**Realistic Last verified:** Not verified yet — run `lab-realistic-bench` workflow
+**Realistic Last verified:** 2026-07-28T19:12:28.746Z ([run](https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30390892661))
 
 ## Scripts
 
