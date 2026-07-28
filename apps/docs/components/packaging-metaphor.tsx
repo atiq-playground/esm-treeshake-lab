@@ -27,7 +27,7 @@ const PKG_ESM: Dot[][] = [
 
 const PKG_BOX_W = 76;
 const PKG_BOX_H = 40;
-/** Leave room so marker arrowheads don't sit on node strokes / text. */
+/** Gap so arrowheads clear node strokes / text. */
 const ARROW_GAP = 10;
 const BAG_PAD_X = 22;
 const BAG_PAD_Y = 18;
@@ -66,17 +66,17 @@ function bagSize(
   const esmContentW = Math.max(
     estimateMonoWidth(esmTitle, 9, 0.03),
     estimateMonoWidth(esmSize, 13),
-    estimateMonoWidth("tiny", 8),
+    estimateMonoWidth("tiny", 9),
   );
   const sContentW = Math.max(
     estimateMonoWidth(sTitle, 11, 0.04),
     estimateMonoWidth(singletonSize, 14),
-    estimateMonoWidth("huge", 8),
+    estimateMonoWidth("huge", 9),
   );
 
   // Title + size + tag baselines with breathing room
-  const esmContentH = 9 + 10 + 13 + 10 + 8;
-  const sContentH = 11 + 10 + 14 + 10 + 8;
+  const esmContentH = 9 + 10 + 13 + 10 + 9;
+  const sContentH = 11 + 10 + 14 + 10 + 9;
 
   const esmW = Math.ceil(esmContentW + BAG_PAD_X * 2);
   const esmH = Math.ceil(esmContentH + BAG_PAD_Y * 2);
@@ -400,7 +400,6 @@ export function PackagingMetaphor({
   const sBagY = singletonY + (singletonH - bags.singletonH) / 2 + 6;
   const sBagCx = sBagX + bags.singletonW / 2;
   const sBagCy = sBagY + bags.singletonH / 2;
-  const sBagEdgeYs = bagEdgeYs(sBagY, bags.singletonH, sPkgYs.length);
 
   // ESM vertical layout
   const ePkgYs = [esmY + 52, esmY + 104, esmY + 156];
@@ -409,7 +408,6 @@ export function PackagingMetaphor({
   const eBagY = esmY + (esmH - bags.esmH) / 2 + 6;
   const eBagCx = eBagX + bags.esmW / 2;
   const eBagCy = eBagY + bags.esmH / 2;
-  const eBagEdgeYs = bagEdgeYs(eBagY, bags.esmH, ePkgYs.length);
 
   const importLabels = ["import used()", "import used()", "…K call sites"];
   const pkgLabelsS = ["pkg 1", "pkg 2", "pkg N"];
@@ -481,7 +479,7 @@ export function PackagingMetaphor({
             y1={schemaCy - 24}
             x2={armX - ARROW_GAP}
             y2={sEntryCy}
-            tone="accent"
+            stroke="var(--accent)"
             dashed
           />
           <text
@@ -501,7 +499,7 @@ export function PackagingMetaphor({
             y1={schemaCy + 24}
             x2={armX - ARROW_GAP}
             y2={esmY + esmH / 2 + 4}
-            tone="success"
+            stroke="var(--success)"
             dashed
           />
           <text
@@ -585,12 +583,11 @@ export function PackagingMetaphor({
           </text>
           <text
             x={sEntryCx}
-            y={sEntryCy + 14}
+            y={sEntryCy + 15}
             textAnchor="middle"
-            fill="var(--accent)"
-            fontSize={8}
+            fill="var(--text-secondary)"
+            fontSize={10}
             fontFamily="var(--font-sans)"
-            opacity={0.85}
           >
             side-effect import
           </text>
@@ -625,7 +622,7 @@ export function PackagingMetaphor({
               x: pkgColX + PKG_BOX_W,
               y: py + PKG_BOX_H / 2,
             }))}
-            targetX={sBagX}
+            targetX={sBagX - 1}
             targetY={sBagCy}
             stroke="var(--accent)"
           />
@@ -702,8 +699,8 @@ export function PackagingMetaphor({
                 x={eImportXs + importW / 2}
                 y={py + 25}
                 textAnchor="middle"
-                fill="var(--success)"
-                fontSize={9}
+                fill="var(--text-primary)"
+                fontSize={10}
                 fontFamily="var(--font-mono)"
                 letterSpacing="0.03em"
               >
@@ -735,7 +732,7 @@ export function PackagingMetaphor({
               x: pkgColX + PKG_BOX_W,
               y: py + PKG_BOX_H / 2,
             }))}
-            targetX={eBagX}
+            targetX={eBagX - 1}
             targetY={eBagCy}
             stroke="var(--success)"
           />
@@ -778,10 +775,9 @@ export function PackagingMetaphor({
             x={eBagCx}
             y={eBagCy + 28}
             textAnchor="middle"
-            fill="var(--success)"
-            fontSize={8}
+            fill="var(--text-secondary)"
+            fontSize={9}
             fontFamily="var(--font-mono)"
-            opacity={0.85}
           >
             tiny
           </text>
