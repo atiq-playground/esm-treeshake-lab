@@ -13,9 +13,7 @@ import { SITE_LINKS, withUtm } from "@/lib/site-links";
 export default async function HomePage() {
   const comparison = loadUseCaseComparison();
   const quickFacts = loadQuickFacts();
-  const { min, max } = comparison.savedPctRange;
   const peak = comparison.largestSave;
-  const isRange = min !== max;
   const peakFactor = peak.singletonVsEsmFactor ?? 1;
 
   return (
@@ -24,33 +22,17 @@ export default async function HomePage() {
         <header className="flex flex-col gap-4">
           <h1 className="lab-brand">ESM TREE-SHAKE LAB</h1>
           <p
-            className={
-              isRange ? "lab-hero-number lab-hero-range" : "lab-hero-number"
-            }
-            aria-label={
-              isRange
-                ? `Saved between ${min} and ${max} percent`
-                : `Saved ${min} percent`
-            }
+            className="lab-hero-number lab-hero-sizes"
+            aria-label={`${peak.singletonPrimary} to ${peak.esmPrimary}`}
           >
-            {isRange ? (
-              <>
-                <span className="lab-hero-range-min">{min}</span>
-                <span className="lab-hero-range-sep" aria-hidden="true">
-                  –
-                </span>
-                <span className="lab-hero-range-max">{max}</span>
-                <span className="lab-hero-unit">%</span>
-              </>
-            ) : (
-              <>
-                {min}
-                <span className="lab-hero-unit">%</span>
-              </>
-            )}
+            <span className="lab-hero-from">{peak.singletonPrimary}</span>
+            <span className="lab-hero-arrow" aria-hidden="true">
+              →
+            </span>
+            <span className="lab-hero-to">{peak.esmPrimary}</span>
           </p>
           <p className="text-[length:var(--body)] text-[color:var(--text-primary)]">
-            Same K call sites. Different bag.
+            Singleton registry vs ESM tree-shake
           </p>
         </header>
 

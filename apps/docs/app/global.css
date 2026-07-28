@@ -59,8 +59,8 @@ body {
   color: var(--text-display);
 }
 
-/* Range hero: space + contrast so min–max reads as two values */
-.lab-hero-range {
+/* Size hero: fat → thin, contrast so the win reads instantly */
+.lab-hero-sizes {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -68,25 +68,18 @@ body {
   gap: 0;
 }
 
-.lab-hero-range-min {
+.lab-hero-from {
   color: var(--text-secondary);
 }
 
-.lab-hero-range-sep {
+.lab-hero-arrow {
   margin: 0 0.28em;
   color: var(--text-disabled);
   font-weight: 300;
 }
 
-.lab-hero-range-max {
+.lab-hero-to {
   color: var(--success);
-}
-
-.lab-hero-unit {
-  margin-left: 0.14em;
-  font-size: 0.55em;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
 }
 
 .lab-brand {
