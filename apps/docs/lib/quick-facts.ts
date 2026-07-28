@@ -22,20 +22,87 @@ export type QuickFactId =
   | "many-consumers"
   | "cold-start";
 
+/** Typical pipeline tools / surfaces this fact maps to (not measured hosts). */
+export type PipelineTag =
+  | "Workers"
+  | "Docker"
+  | "CI"
+  | "egress"
+  | "esbuild"
+  | "npm"
+  | "Node"
+  | "memory"
+  | "monorepo";
+
+/** Illustrative “who hurts?” vignette — not a measured host. */
+export type QuickFactExample = {
+  app: string;
+  /** Runtime → bundler → ship, 3–5 short lines */
+  stack: readonly string[];
+};
+
 export type QuickFact = {
   id: QuickFactId;
   /** Uppercase strip label */
   label: string;
   /** Punchy primary line (sizes / multipliers) */
   headline: string;
-  /** One scannable supporting line */
+  /** Always-visible short supporting line */
   detail: string;
+  /** Extra numbers / context revealed on hover or focus */
+  expand: string;
   evidence: EvidenceKind;
   /** Short badge text */
   badge: string;
-  /** Optional second line for assumptions / caveats */
+  /** Pipeline associations for operators */
+  pipelineTags: readonly PipelineTag[];
+  /** Concrete app + stack that answers “who hurts?” */
+  example: QuickFactExample;
+  /** Optional second line — reserved for rare warnings */
   caveat?: string;
   emphasis: "singleton" | "esm" | "neutral";
+};
+
+const PIPELINE_TAGS: Record<QuickFactId, readonly PipelineTag[]> = {
+  "deploy-payload": ["Workers", "Docker", "egress"],
+  "n1000-singleton": ["esbuild", "Workers", "Docker"],
+  "org-scale": ["Docker", "egress", "Workers"],
+  "build-cpu": ["CI", "esbuild"],
+  "third-party": ["npm", "Docker", "esbuild"],
+  "many-consumers": ["monorepo", "CI", "Docker"],
+  "cold-start": ["Node", "Workers", "memory"],
+};
+
+/** Illustrative associations — honesty stays in scopeNote / expand. */
+const EXAMPLES: Record<QuickFactId, QuickFactExample> = {
+  "deploy-payload": {
+    app: "Edge GraphQL Worker",
+    stack: ["Workers", "wrangler", "esbuild", "egress"],
+  },
+  "n1000-singleton": {
+    app: "Plugin platform @ 1k packages",
+    stack: ["esbuild", "Workers", "fat registry"],
+  },
+  "org-scale": {
+    app: "Org monorepo @ 500–1000 pkgs",
+    stack: ["Docker", "deploy", "egress"],
+  },
+  "build-cpu": {
+    app: "Monorepo CI cache miss",
+    stack: ["GitHub Actions", "Bun", "esbuild"],
+  },
+  "third-party": {
+    app: "BFF with unused SDK ballast",
+    stack: ["npm", "Docker", "esbuild"],
+  },
+  "many-consumers": {
+    app: "100 identical Worker apps",
+    stack: ["monorepo", "CI", "Docker"],
+  },
+  "cold-start": {
+    app: "Node service cold import",
+    stack: ["Node", "Workers", "memory"],
+  },
 };
 
 export type QuickFactsSummary = {
@@ -73,10 +140,14 @@ function sweepRow(caseId: string, n: number): SweepRow {
   return row;
 }
 
+function pctLabel(pct: number | undefined): string {
+  if (pct == null || !Number.isFinite(pct)) return "";
+  return `${Math.round(pct)}%`;
+}
+
 function factorLabel(factor: number | undefined): string {
   if (factor == null || !Number.isFinite(factor)) return "";
-  const rounded = factor >= 10 ? Math.round(factor) : Number(factor.toFixed(1));
-  return `${rounded}×`;
+  return `${Math.round(factor)}×`;
 }
 
 function thirdPartyFact(
@@ -88,27 +159,31 @@ function thirdPartyFact(
     byteParts(stub.arms.singleton.bytes).primary;
   const esm =
     stub.arms.esm.size?.primary ?? byteParts(stub.arms.esm.bytes).primary;
+  const stubPct = pctLabel(stub.benefit.bytesSavedPct);
+  const realPct = real != null ? pctLabel(real.benefit.bytesSavedPct) : null;
   const count = stub.thirdParty?.count ?? "?";
   const ballast =
     stub.thirdParty != null
       ? byteParts(stub.thirdParty.bytesPerPackage).primary
       : "?";
 
-  const realLine =
+  const realExpand =
     real != null
-      ? ` Real npm (graphql + unused SDK extras) @ N=${real.n}: ${real.arms.singleton.size?.primary ?? byteParts(real.arms.singleton.bytes).primary} → ${real.arms.esm.size?.primary ?? byteParts(real.arms.esm.bytes).primary} (${real.benefit.bytesSavedPct}%).`
+      ? ` Real npm @ N=${real.n}: ${real.arms.singleton.size?.primary ?? byteParts(real.arms.singleton.bytes).primary} → ${real.arms.esm.size?.primary ?? byteParts(real.arms.esm.bytes).primary} (${realPct}).`
       : "";
 
   return {
     id: "third-party",
-    label: "Unused SDK ballast",
+    label: "Unused SDKs",
     headline: `${singleton} → ${esm}`,
-    detail: `Stub 3p @ N=${stub.n} · ${count}×${ballast}: singleton keeps unused extras; ESM pays shared core only · ${stub.benefit.bytesSavedPct}% smaller.${realLine}`,
+    detail: realPct
+      ? `${stubPct} smaller; real npm ~${realPct.replace("%", "")}%`
+      : `${stubPct} smaller on unused extras`,
+    expand: `Stub 3p @ N=${stub.n} · ${count}×${ballast}: singleton keeps unused extras; ESM pays shared core only.${realExpand}`,
     evidence: "measured",
     badge: "Measured",
-    caveat: real
-      ? "Stub path = reproducible byte floors. Real path = pinned graphql/dataloader/graphql-tag/uuid (lockfile)."
-      : "Generated @lab/3p-* stubs with fixed ballast — pass --3p=real for pinned npm.",
+    pipelineTags: PIPELINE_TAGS["third-party"],
+    example: EXAMPLES["third-party"],
     emphasis: "esm",
   };
 }
@@ -122,36 +197,44 @@ function manyConsumersFact(
     const singleton =
       totals.singletonSize?.primary ?? byteParts(totals.singletonBytes).primary;
     const esm = totals.esmSize?.primary ?? byteParts(totals.esmBytes).primary;
+    const m = totals.consumers;
     const shared = totals.shared;
-    const sharedLine =
+    const sharedExpand =
       shared != null
         ? ` Multi-entry shared: ${shared.singletonSize?.primary ?? byteParts(shared.singletonBytes).primary} → ${shared.esmSize?.primary ?? byteParts(shared.esmBytes).primary}` +
           (totals.sharingSavingsPct != null
-            ? ` (${totals.sharingSavingsPct}% less singleton than naive ×M).`
+            ? ` (${pctLabel(totals.sharingSavingsPct)} less singleton than naive ×M).`
             : ".")
         : "";
 
     return {
       id: "many-consumers",
-      label: "Many consumers",
+      label: "Many apps",
       headline: `${singleton} → ${esm}`,
-      detail: `Naive fleet @ N=${fleet.n} × M=${totals.consumers}: each identical app pays the registry again · ${totals.bytesSavedPct}% smaller across the fleet.${sharedLine}`,
+      detail: `${m} apps: pay once, not ${m}×`,
+      expand: `Naive fleet @ N=${fleet.n} × M=${m}: each identical app pays the registry again · ${pctLabel(totals.bytesSavedPct)} smaller across the fleet.${sharedExpand}`,
       evidence: "measured",
       badge: "Measured",
-      caveat:
-        "Naive = per-consumer × M (separate deploys). Shared = one esbuild multi-entry with code-splitting.",
+      pipelineTags: PIPELINE_TAGS["many-consumers"],
+      example: EXAMPLES["many-consumers"],
       emphasis: "esm",
     };
   }
 
+  const unit =
+    wide.arms.singleton.size?.primary ?? byteParts(wide.arms.singleton.bytes).primary;
+
   return {
     id: "many-consumers",
-    label: "Many consumers",
+    label: "Many apps",
     headline: "× apps",
-    detail: `Each monorepo app that side-effect-imports the registry ships the full graph again. 5 consumers ≈ 5× ${wide.arms.singleton.size?.primary ?? byteParts(wide.arms.singleton.bytes).primary} into 5 artifacts.`,
+    detail: `Each app pays the full ${unit} again`,
+    expand:
+      "Side-effect import of the registry repeats the full graph per monorepo app. Multiplier is packaging topology, not a separate lab host.",
     evidence: "operator",
     badge: "Operator feel",
-    caveat: "Multiplier is packaging topology, not a separate lab host.",
+    pipelineTags: PIPELINE_TAGS["many-consumers"],
+    example: EXAMPLES["many-consumers"],
     emphasis: "neutral",
   };
 }
@@ -171,42 +254,60 @@ function coldStartFact(report?: BenchmarkReport): QuickFact {
       report.n <= 3 ||
       (report.benefit.rssBytesSavedPct != null &&
         report.benefit.rssBytesSavedPct < 1);
+
+    const detail = smokeOrTinyRss
+      ? "Smoke N understates RSS — use research N=50"
+      : [
+          importSaved != null ? `${pctLabel(importSaved)} faster` : null,
+          rssSaved != null && report.benefit.rssBytesSaved
+            ? `${rssSaved} less RSS`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+
+    const expand = smokeOrTinyRss
+      ? `Node cold import @ N=${report.n}: ${s.importMs} ms → ${e.importMs} ms` +
+        (importSaved != null ? ` · ${pctLabel(importSaved)} faster` : "") +
+        ". Absolute RSS ≈ Node baseline (~45 MB), so smoke looks flat; published latest uses N=50."
+      : `Node cold import of an already-bundled .mjs @ N=${report.n} — not Workers isolate boot.` +
+        (rssSaved != null && report.benefit.rssBytesSavedPct != null
+          ? ` RSS Δ ${rssSaved} (${pctLabel(report.benefit.rssBytesSavedPct)}); absolute RSS includes ~45 MB Node baseline.`
+          : " Use import ms + RSS Δ, not absolute RSS.");
+
     return {
       id: "cold-start",
-      label: "Cold start / memory",
+      label: "Cold import",
       headline: `${s.importMs} ms → ${e.importMs} ms`,
-      detail: `Node cold import @ N=${report.n}: singleton vs ESM wall time` +
-        (importSaved != null ? ` · ${importSaved}% faster` : "") +
-        (rssSaved != null && report.benefit.rssBytesSaved
-          ? ` · RSS Δ ${rssSaved} (${report.benefit.rssBytesSavedPct}%)`
-          : "") +
-        ".",
+      detail: detail || "Node cold import wall time",
+      expand,
       evidence: "measured",
       badge: "Measured",
-      caveat: smokeOrTinyRss
-        ? "Times one already-bundled .mjs per arm (esbuild done before the clock) — not multi-module load or Workers isolate boot. Absolute RSS ≈ Node baseline (~45 MB), so smoke N=3 looks almost flat; published latest uses research N=50 (import ms is the signal)."
-        : "Node cold import of an already-bundled .mjs @ research N — not Workers isolate boot. Absolute RSS includes ~45 MB Node baseline; use import ms + RSS Δ, not absolute RSS.",
+      pipelineTags: PIPELINE_TAGS["cold-start"],
+      example: EXAMPLES["cold-start"],
       emphasis: "esm",
     };
   }
 
   return {
     id: "cold-start",
-    label: "Cold start / memory",
+    label: "Cold import",
     headline: "Parse what you ship",
-    detail:
-      "Worker/isolate cold start and memory track retained JS. Run lab:bench:coldstart for Node import ms + RSS.",
+    detail: "Run coldstart bench for import ms + RSS",
+    expand:
+      "Worker/isolate cold start and memory track retained JS. Workers isolate boot remains unmeasured in this lab.",
     evidence: "operator",
     badge: "Operator feel",
-    caveat: "Workers isolate boot remains unmeasured in this lab.",
+    pipelineTags: PIPELINE_TAGS["cold-start"],
+    example: EXAMPLES["cold-start"],
     emphasis: "neutral",
   };
 }
 
 /**
  * Build scannable QUICK FACTS from landing benches + N-ladder sweep.
- * Separates measured lab numbers from linear-N extrapolations and operator feels.
- * Optional sibling reports (thirdparty / fleet / coldstart) promote measured cards.
+ * Headline + short detail always show; expand adds numbers on hover/focus.
+ * Method lives in scopeNote — not per-card caveats.
  */
 export function toQuickFacts(
   reports: Record<"baseline" | "wide" | "cycles" | "partial", BenchmarkReport>,
@@ -230,47 +331,57 @@ export function toQuickFacts(
     measuredN,
     targetN: 1000,
   });
+  const singletonPrimary =
+    singleton.size?.primary ?? byteParts(singleton.bytes).primary;
+  const esmPrimary = esm.size?.primary ?? byteParts(esm.bytes).primary;
 
   const facts: QuickFact[] = [
     {
       id: "deploy-payload",
-      label: "Deploy / isolate",
-      headline: `${singleton.size?.primary ?? byteParts(singleton.bytes).primary} → ${esm.size?.primary ?? byteParts(esm.bytes).primary}`,
-      detail: `Fat modules @ N=${measuredN}: singleton registry vs selective ESM · ${savedPct}% smaller · ${factorLabel(factor)} size`,
+      label: "Deploy size",
+      headline: `${singletonPrimary} → ${esmPrimary}`,
+      detail: `${pctLabel(savedPct)} smaller · ${factorLabel(factor)} less to deploy`,
+      expand: `Fat modules @ N=${measuredN}: singleton registry vs selective ESM · landing-shaped K (~3 resolvers/pkg). Drives Worker upload, Docker COPY, and egress.`,
       evidence: "measured",
       badge: "Measured",
-      caveat: "Landing-shaped K (~3 resolvers/pkg). UC1–UC4 first-party stubs.",
+      pipelineTags: PIPELINE_TAGS["deploy-payload"],
+      example: EXAMPLES["deploy-payload"],
       emphasis: "esm",
     },
     {
       id: "n1000-singleton",
-      label: "N=1000 registry",
+      label: "At 1000 packages",
       headline: byteParts(wide1000.singletonBytes).primary,
-      detail: `Wide sweep singleton @ N=1000 (K=${wide1000.callSites}). ESM stays ${byteParts(wide1000.esmBytes).primary} when the entry imports one package.`,
+      detail: `ESM stays ${byteParts(wide1000.esmBytes).primary} if you import one package`,
+      expand: `Wide sweep singleton @ N=1000 (K=${wide1000.callSites}). Singleton size still tracks N; ESM stays flat when the entry imports one package.`,
       evidence: "measured",
       badge: "Measured",
-      caveat: "Sweep K=1 (not landing’s ~3/pkg). Singleton size still tracks N.",
+      pipelineTags: PIPELINE_TAGS["n1000-singleton"],
+      example: EXAMPLES["n1000-singleton"],
       emphasis: "singleton",
     },
     {
       id: "org-scale",
-      label: "Orgs at 500–1000+",
+      label: "Org scale",
       headline: `${at500.primary}–${at1000Landing.primary}`,
-      detail: `Projected singleton deploy from fat landing @ N=${measuredN}. Many orgs live here — not stuck at N=100.`,
+      detail: "Where many orgs actually sit",
+      expand: `Projected singleton deploy from fat landing @ N=${measuredN} → N=500–1000 (linear in N · same fns/package · first-party stubs).`,
       evidence: "extrapolated",
       badge: "Extrapolated",
-      caveat: "Linear in N · same fns/package · first-party stubs only.",
+      pipelineTags: PIPELINE_TAGS["org-scale"],
+      example: EXAMPLES["org-scale"],
       emphasis: "singleton",
     },
     {
       id: "build-cpu",
-      label: "CI & local rebuild",
+      label: "Rebuild time",
       headline: `${wide1000.singletonBuildMs} ms → ${wide1000.esmBuildMs} ms`,
-      detail: `esbuild wall time, wide @ N=1000. Cache misses and local reloads re-parse the full registry graph — ESM stays near-flat.`,
+      detail: "Cache-miss rebuild stays near-flat",
+      expand: `esbuild wall time, wide @ N=1000. Cache misses re-parse the full registry graph — order-of-magnitude on laptop, not a CI SLO.`,
       evidence: "measured",
       badge: "Measured",
-      caveat:
-        "Laptop WSL2 / Bun — order-of-magnitude, not a CI SLO. Install times are not a story here (stubs are resolution-only).",
+      pipelineTags: PIPELINE_TAGS["build-cpu"],
+      example: EXAMPLES["build-cpu"],
       emphasis: "esm",
     },
   ];
@@ -300,8 +411,8 @@ export function toQuickFacts(
       SCALE_PROJECTION_ASSUMPTIONS.thinCallSitesNotLandingShaped,
     ],
     scopeNote: hasExtended
-      ? "UC1–UC4: stub first-party graphs. Sibling benches add stub/real 3p ballast, fleet ×M vs multi-entry shared, and Node cold-start RSS. Numbers compare packaging for the same call-site count K."
-      : "Stub first-party graphs only — no graphql, DataLoader, ORMs, or auth SDKs. Numbers compare packaging for the same call-site count K.",
+      ? "Stub first-party + sibling benches (3p, fleet, coldstart). Method → Research."
+      : "Stub first-party graphs only. Same K call sites. Method → Research.",
   };
 }
 

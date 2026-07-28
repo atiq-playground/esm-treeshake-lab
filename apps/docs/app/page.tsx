@@ -4,7 +4,7 @@ import { GitHubIcon, LinkedInIcon, XIcon } from "@/components/brand-icons";
 import { PackagingMetaphor } from "@/components/packaging-metaphor";
 import { SupportCta } from "@/components/support-cta";
 import { QuickFacts } from "@/components/quick-facts";
-import { UseCaseComparisonChart } from "@/components/use-case-comparison-chart";
+import { UseCaseComparisonChartLazy } from "@/components/use-case-comparison-chart-lazy";
 import { baseOptions } from "@/lib/layout.shared";
 import { loadUseCaseComparison } from "@/lib/benchmark";
 import { loadQuickFacts } from "@/lib/quick-facts";
@@ -50,7 +50,7 @@ export default async function HomePage() {
           <p className="text-[length:var(--body)] text-[color:var(--text-secondary)]">
             Singleton vs ESM size · four surfaces
           </p>
-          <UseCaseComparisonChart rows={comparison.rows} />
+          <UseCaseComparisonChartLazy rows={comparison.rows} />
         </section>
 
         <QuickFacts summary={quickFacts} />

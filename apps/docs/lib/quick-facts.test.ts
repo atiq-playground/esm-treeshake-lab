@@ -177,19 +177,46 @@ const landing = {
 };
 
 describe("toQuickFacts", () => {
-  test("marks deploy and N=1000 as measured; org-scale as extrapolated", () => {
+  test("uses short scannable copy with method in scopeNote, not per-card caveats", () => {
     const summary = toQuickFacts(landing);
 
     const byId = Object.fromEntries(summary.facts.map((f) => [f.id, f]));
-    expect(byId["deploy-payload"]?.evidence).toBe("measured");
-    expect(byId["n1000-singleton"]?.evidence).toBe("measured");
+    expect(byId["deploy-payload"]?.label).toBe("Deploy size");
+    expect(byId["deploy-payload"]?.detail).toBe("89% smaller · 9× less to deploy");
+    expect(byId["deploy-payload"]?.expand).toMatch(/N=100/);
+    expect(byId["deploy-payload"]?.expand).toMatch(/Docker|egress|Worker/i);
+    expect(byId["deploy-payload"]?.caveat).toBeUndefined();
+    expect(byId["deploy-payload"]?.pipelineTags).toEqual([
+      "Workers",
+      "Docker",
+      "egress",
+    ]);
+
+    expect(byId["n1000-singleton"]?.label).toBe("At 1000 packages");
     expect(byId["n1000-singleton"]?.headline).toMatch(/MB/);
+    expect(byId["n1000-singleton"]?.detail).toMatch(/ESM stays/i);
+    expect(byId["n1000-singleton"]?.detail.length).toBeLessThanOrEqual(70);
+    expect(byId["n1000-singleton"]?.expand).toMatch(/N=1000/);
+    expect(byId["n1000-singleton"]?.pipelineTags).toContain("esbuild");
+
+    expect(byId["org-scale"]?.label).toBe("Org scale");
     expect(byId["org-scale"]?.evidence).toBe("extrapolated");
-    expect(byId["org-scale"]?.headline).toContain("–");
-    expect(byId["build-cpu"]?.evidence).toBe("measured");
+    expect(byId["org-scale"]?.detail).toBe("Where many orgs actually sit");
+    expect(byId["org-scale"]?.expand).toMatch(/projected|linear/i);
+
+    expect(byId["build-cpu"]?.label).toBe("Rebuild time");
+    expect(byId["build-cpu"]?.detail).toBe("Cache-miss rebuild stays near-flat");
+    expect(byId["build-cpu"]?.expand).toMatch(/esbuild|N=1000/i);
+    expect(byId["build-cpu"]?.pipelineTags).toEqual(["CI", "esbuild"]);
+
     expect(byId["many-consumers"]?.evidence).toBe("operator");
     expect(byId["cold-start"]?.evidence).toBe("operator");
-    expect(summary.scopeNote).toMatch(/first-party/i);
+    expect(byId["cold-start"]?.pipelineTags).toEqual([
+      "Node",
+      "Workers",
+      "memory",
+    ]);
+    expect(summary.scopeNote).toMatch(/Research|method|stub/i);
     expect(summary.assumptions.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -200,13 +227,13 @@ describe("toQuickFacts", () => {
     const fact = summary.facts.find((f) => f.id === "many-consumers");
     expect(fact?.evidence).toBe("measured");
     expect(fact?.badge).toBe("Measured");
+    expect(fact?.label).toBe("Many apps");
     expect(fact?.headline).toBe("12.56 MB → 19.5 KB");
-    expect(fact?.detail).toMatch(/N=50/);
-    expect(fact?.detail).toMatch(/×\s*100|M=100/);
-    expect(fact?.detail).toMatch(/99\.8%/);
-    expect(fact?.detail).toMatch(/multi-entry|shared/i);
-    expect(fact?.detail).toMatch(/98\.8%/);
-    expect(fact?.caveat?.toLowerCase()).toMatch(/naive|shared|multi-entry/);
+    expect(fact?.detail).toBe("100 apps: pay once, not 100×");
+    expect(fact?.expand).toMatch(/N=50/);
+    expect(fact?.expand).toMatch(/99%/);
+    expect(fact?.expand).toMatch(/shared|multi-entry/i);
+    expect(fact?.caveat).toBeUndefined();
   });
 
   test("adds measured third-party ballast fact from sibling report", () => {
@@ -217,12 +244,13 @@ describe("toQuickFacts", () => {
     const fact = summary.facts.find((f) => f.id === "third-party");
     expect(fact).toBeDefined();
     expect(fact?.evidence).toBe("measured");
+    expect(fact?.label).toBe("Unused SDKs");
     expect(fact?.headline).toBe("386 KB → 32.4 KB");
-    expect(fact?.detail).toMatch(/91\.6%/);
-    expect(fact?.detail).toMatch(/4/);
-    expect(fact?.detail).toMatch(/real npm/i);
-    expect(fact?.detail).toMatch(/99\.3%/);
-    expect(fact?.caveat?.toLowerCase()).toMatch(/stub|real|pin/);
+    expect(fact?.detail).toBe("92% smaller; real npm ~99%");
+    expect(fact?.expand).toMatch(/4×/);
+    expect(fact?.expand).toMatch(/real npm/i);
+    expect(fact?.expand).toMatch(/99%/);
+    expect(fact?.caveat).toBeUndefined();
   });
 
   test("promotes cold-start to measured Node import + RSS when report present", () => {
@@ -231,13 +259,14 @@ describe("toQuickFacts", () => {
     });
     const fact = summary.facts.find((f) => f.id === "cold-start");
     expect(fact?.evidence).toBe("measured");
+    expect(fact?.label).toBe("Cold import");
     expect(fact?.headline).toBe("1.97 ms → 0.33 ms");
-    expect(fact?.detail).toMatch(/83\.2%/);
-    expect(fact?.detail).toMatch(/RSS/i);
-    expect(fact?.caveat?.toLowerCase()).toMatch(/bundled|baseline|isolate/);
+    expect(fact?.detail).toMatch(/^83% faster · .+ less RSS$/);
+    expect(fact?.expand).toMatch(/N=50|bundled|baseline|isolate/i);
+    expect(fact?.caveat).toBeUndefined();
   });
 
-  test("caveats louder when coldstart report is smoke N with tiny RSS Δ", () => {
+  test("keeps a short smoke warning when coldstart N understates the gap", () => {
     const summary = toQuickFacts(landing, {
       coldstart: {
         ...coldstartReport(),
@@ -269,7 +298,9 @@ describe("toQuickFacts", () => {
     });
     const fact = summary.facts.find((f) => f.id === "cold-start");
     expect(fact?.headline).toBe("0.5 ms → 0.33 ms");
-    expect(fact?.caveat?.toLowerCase()).toMatch(/smoke|almost flat|n=50|research/);
+    expect(fact?.detail).toMatch(/smoke|understates|N=50/i);
+    expect(fact?.expand).toMatch(/smoke|baseline|N=50/i);
+    expect(fact?.detail.length).toBeLessThanOrEqual(80);
   });
 
   test("omits third-party fact and keeps operator many-consumers without extended reports", () => {
@@ -278,5 +309,35 @@ describe("toQuickFacts", () => {
     expect(
       summary.facts.find((f) => f.id === "many-consumers")?.evidence,
     ).toBe("operator");
+    expect(
+      summary.facts.find((f) => f.id === "many-consumers")?.detail.length,
+    ).toBeLessThanOrEqual(70);
+  });
+
+  test("wires an example app vignette on every fact (app + 3–5 stack lines)", () => {
+    const summary = toQuickFacts(landing, {
+      thirdparty: thirdpartyReport(),
+      thirdpartyReal: thirdpartyRealReport(),
+      fleet: fleetReport(),
+      coldstart: coldstartReport(),
+    });
+
+    for (const fact of summary.facts) {
+      expect(fact.example.app.length).toBeGreaterThan(0);
+      expect(fact.example.stack.length).toBeGreaterThanOrEqual(3);
+      expect(fact.example.stack.length).toBeLessThanOrEqual(5);
+      for (const line of fact.example.stack) {
+        expect(line.length).toBeGreaterThan(0);
+      }
+    }
+
+    const byId = Object.fromEntries(summary.facts.map((f) => [f.id, f]));
+    expect(byId["deploy-payload"]?.example.app).toMatch(/Edge GraphQL/i);
+    expect(byId["n1000-singleton"]?.example.app).toMatch(/Plugin platform/i);
+    expect(byId["org-scale"]?.example.app).toMatch(/Org monorepo/i);
+    expect(byId["build-cpu"]?.example.app).toMatch(/CI cache/i);
+    expect(byId["third-party"]?.example.app).toMatch(/BFF/i);
+    expect(byId["many-consumers"]?.example.app).toMatch(/Worker apps/i);
+    expect(byId["cold-start"]?.example.app).toMatch(/cold import/i);
   });
 });
