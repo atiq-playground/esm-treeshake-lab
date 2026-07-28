@@ -42,6 +42,7 @@ import {
   type FleetMode,
   type PipelineCacheMode,
   type PipelineReport,
+  type RequestReport,
   type ThirdPartyConfig,
 } from "./bench-metrics.ts";
 import { byteParts, formatBytesDetail } from "./format-bytes.ts";
@@ -796,7 +797,7 @@ const mdPath = publishLatest
 
 type PriorRealistic = {
   pipeline?: PipelineReport;
-  request?: unknown;
+  request?: RequestReport;
 };
 
 function readPriorRealistic(): PriorRealistic | null {
@@ -1040,6 +1041,22 @@ const proofSection =
 `
     : "";
 
+const requestSection =
+  realisticRequest != null
+    ? `
+## Request-time (Node HTTP)
+
+> ${realisticRequest.disclaimer}
+
+| Arm | p50 (ms) | p95 (ms) | CPU user (ms) | CPU system (ms) | RSS | Heap |
+|-----|---------:|---------:|--------------:|----------------:|----:|-----:|
+| Singleton | ${realisticRequest.singleton.latencyMs.p50} | ${realisticRequest.singleton.latencyMs.p95} | ${realisticRequest.singleton.cpuUserMs} | ${realisticRequest.singleton.cpuSystemMs} | ${realisticRequest.singleton.rssBytes.toLocaleString("en-US")} | ${realisticRequest.singleton.heapUsedBytes.toLocaleString("en-US")} |
+| ESM | ${realisticRequest.esm.latencyMs.p50} | ${realisticRequest.esm.latencyMs.p95} | ${realisticRequest.esm.cpuUserMs} | ${realisticRequest.esm.cpuSystemMs} | ${realisticRequest.esm.rssBytes.toLocaleString("en-US")} | ${realisticRequest.esm.heapUsedBytes.toLocaleString("en-US")} |
+
+Warmup discarded: ${realisticRequest.singleton.warmup}; measured: ${realisticRequest.singleton.measured}; concurrency: ${realisticRequest.singleton.concurrency}. Fresh Node process per arm.
+`
+    : "";
+
 const md = `# Scale bench ${benchCase}
 
 - **When:** ${report.timestamp}
@@ -1073,7 +1090,7 @@ ${report.methodologyLimits ? `> **Methodology limits:** ${report.methodologyLimi
 | Singleton / ESM size | ${singletonVsEsmFactor}× |
 | Call-site coverage of surface | ${callSiteCoveragePct}% (${callSites}/${surfaceFns}) |
 | Unused markers removed | ${unusedRemovedPct}% (Δ ${unusedMarkersDelta}) |
-${tpSection}${fleetSection}${pipelineSection}${proofSection}
+${tpSection}${fleetSection}${pipelineSection}${proofSection}${requestSection}
 ## Why this matters
 
 ${whyBlock}

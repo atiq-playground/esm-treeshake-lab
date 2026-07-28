@@ -72,6 +72,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # Drop lockfile churn from generated workspace packages (not part of proof).
+          git checkout -- bun.lock 2>/dev/null || true
+
           # Refresh README Last verified from proof (no hard-coded date in source).
           bun -e '
             import { readFileSync, writeFileSync } from "node:fs";
@@ -100,7 +103,9 @@ jobs:
           git commit -m "chore: realistic bench proof from GHA run ${GITHUB_RUN_ID}"
           git push -u origin "$BRANCH"
 
-          gh pr create \
+          # Org may forbid Actions from creating PRs; branch push is the success
+          # criterion — open the proof PR manually from the branch if this fails.
+          if ! gh pr create \
             --title "chore: realistic GraphQL bench proof (run ${GITHUB_RUN_ID})" \
             --body "$(cat <<EOF
           ## Summary
@@ -115,4 +120,7 @@ jobs:
 
           Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
-          )"
+          )"; then
+            echo "::warning::gh pr create failed (org may block Actions PRs). Branch pushed: ${BRANCH}"
+            echo "Open manually: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${BRANCH}?expand=1"
+          fi

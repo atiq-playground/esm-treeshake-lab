@@ -5,6 +5,7 @@ import {
   buildRequestArmProbeSource,
   parseRequestArmProbeStdout,
   requestArmSpawnArgs,
+  requestArmSpawnTimeoutMs,
 } from "./request-bench-arm.ts";
 
 describe("REQUEST_ARM_ISOLATION", () => {
@@ -38,6 +39,15 @@ describe("buildRequestArmProbeSource", () => {
     expect(source).toMatch(/POST/);
     expect(source).toMatch(/\/invoke/);
   });
+
+  test("force-closes keep-alive sockets before server.close", () => {
+    const source = buildRequestArmProbeSource({
+      bundlePath: "/tmp/lab-bench/esm-realistic.js",
+      warmup: 1,
+      measured: 1,
+    });
+    expect(source).toMatch(/closeAllConnections\s*\(/);
+  });
 });
 
 describe("parseRequestArmProbeStdout", () => {
@@ -54,6 +64,40 @@ describe("parseRequestArmProbeStdout", () => {
     };
     const parsed = parseRequestArmProbeStdout(JSON.stringify(payload) + "\n");
     expect(parsed).toEqual(payload);
+  });
+
+  test("parses the last JSON object when stdout has leading noise", () => {
+    const payload = {
+      latenciesMs: [1],
+      warmup: 1,
+      measured: 1,
+      concurrency: 1,
+      cpuUserMs: 1,
+      cpuSystemMs: 0.1,
+      rssBytes: 1000,
+      heapUsedBytes: 500,
+    };
+    const parsed = parseRequestArmProbeStdout(
+      `debugger listening\n${JSON.stringify(payload)}\n`,
+    );
+    expect(parsed).toEqual(payload);
+  });
+
+  test("rejects latency length mismatch vs measured", () => {
+    expect(() =>
+      parseRequestArmProbeStdout(
+        JSON.stringify({
+          latenciesMs: [1, 2],
+          warmup: 1,
+          measured: 3,
+          concurrency: 1,
+          cpuUserMs: 1,
+          cpuSystemMs: 1,
+          rssBytes: 1,
+          heapUsedBytes: 1,
+        }),
+      ),
+    ).toThrow(/latenciesMs length/);
   });
 
   test("rejects invalid child payloads", () => {
@@ -85,5 +129,16 @@ describe("requestArmSpawnArgs", () => {
     expect(args).toEqual(["/tmp/request-probe-esm.mjs"]);
     expect(env.NODE_OPTIONS).toBe("");
     expect(env.PATH).toBe("/usr/bin");
+  });
+});
+
+describe("requestArmSpawnTimeoutMs", () => {
+  test("scales with warmup+measured and stays above a floor", () => {
+    expect(requestArmSpawnTimeoutMs({ warmup: 1, measured: 1 })).toBeGreaterThanOrEqual(
+      60_000,
+    );
+    expect(
+      requestArmSpawnTimeoutMs({ warmup: 50, measured: 1000 }),
+    ).toBeGreaterThan(requestArmSpawnTimeoutMs({ warmup: 2, measured: 5 }));
   });
 });
