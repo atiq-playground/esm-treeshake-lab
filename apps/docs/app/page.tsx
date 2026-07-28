@@ -47,6 +47,9 @@ export default async function HomePage() {
 
         <section className="flex flex-col gap-3">
           <p className="lab-label">Worker / deploy artifact</p>
+          <p className="text-[length:var(--body)] text-[color:var(--text-secondary)]">
+            Singleton vs ESM size · four surfaces
+          </p>
           <UseCaseComparisonChart rows={comparison.rows} />
         </section>
 
