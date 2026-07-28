@@ -4,7 +4,7 @@ alwaysApply: false
 ---
 # React Coding Style
 
-> This file extends [typescript/coding-style.mdc](../typescript/coding-style.mdc) and [common/coding-style.mdc](../common/coding-style.mdc) with React specific content.
+> This file extends [typescript/coding-style.mdc](../typescript/coding-style.mdc) with React specific content.
 
 ## File Extensions
 

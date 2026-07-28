@@ -7,24 +7,19 @@ live in [RULES.md](RULES.md).
 ## Project Overview
 
 test-app is a next application scaffolded with the ai-harness
-agent configuration: the same agents, skills, and layered rules mirrored under
+agent configuration: skills and layered rules mirrored under
 [`.cursor/`](.cursor) and [`.claude/`](.claude), so Cursor and Claude Code
 behave identically here.
 
 ## Core Principles
 
-- **Agent-first.** Route non-trivial work through the right agent (plan,
-  design, test, review) instead of improvising.
-- **Plan before execute.** Non-trivial work starts with a plan: see the
-  `planner` agent (and `architect` for design decisions).
-- **TDD.** Write the failing test first, then the code: see the `tdd-guide`
-  agent and `tdd` skill (red-green-refactor).
+- **Plan before execute.** Non-trivial work starts with a plan (skills like
+  `windwaker` / `grilling` when the path is unclear).
+- **TDD.** Write the failing test first, then the code: see the `tdd` skill
+  (red-green-refactor).
 - **Security-first.** Treat external and untrusted input as untrusted until
-  validated: see the `security-reviewer` agent.
-- **Request-scoped auth.** Emulate Better Auth's per-request session model
-  (cookies/headers → explicit bearer on outbound calls). Never ambient
-  module-level tokens; token-handling code is server-only: see
-  [`.cursor/rules/common/auth.mdc`](.cursor/rules/common/auth.mdc).
+  validated. Never ambient module-level tokens; token-handling code is
+  server-only.
 - **Immutability (CRITICAL).** Always create new objects; never mutate
   existing ones.
 - **KISNS / DRY / YAGNI.** Keep it simple, not stupid; extract real
@@ -32,38 +27,25 @@ behave identically here.
 - **Confidence-based review.** Only report findings you are >80% sure are
   real; a clean review with zero findings is valid.
 
-## Agents and Skills
+## Skills
 
-Available agents live under [`.cursor/agents/`](.cursor/agents) (mirrored in
-[`.claude/agents/`](.claude/agents)); available skills live under
-[`.cursor/skills/<name>/SKILL.md`](.cursor/skills) (mirrored in
-[`.claude/skills/`](.claude/skills)). Read a skill's `SKILL.md` before
-invoking it.
+Available skills live under [`.cursor/skills/<name>/SKILL.md`](.cursor/skills)
+(mirrored in [`.claude/skills/`](.claude/skills)). Read a skill's `SKILL.md`
+before invoking it.
 
 ## Rules
 
 Layered rules live under [`.cursor/rules/**/*.mdc`](.cursor/rules) (mirrored
-as plain Markdown under [`.claude/rules/**/*.md`](.claude/rules)): a
-`common` baseline extended by language- and platform-specific rules.
+as plain Markdown under [`.claude/rules/**/*.md`](.claude/rules)):
+`common/release` plus language- and platform-specific rules (`typescript`,
+`react`, `web`, `next`).
 
-## Review
+## Issue tracker
 
-Review agents read [`docs/agents/review/shared-standards.md`](docs/agents/review/shared-standards.md)
-first, then the relevant domain checklist:
-[`architecture-smells.md`](docs/agents/review/architecture-smells.md),
-[`backend-checklist.md`](docs/agents/review/backend-checklist.md),
-[`frontend-checklist.md`](docs/agents/review/frontend-checklist.md), or
-[`security-checklist.md`](docs/agents/review/security-checklist.md).
-
-## AFK Loop
-
-**issue → agent → PR → review → e2e → merge → preview.** Label a tracked
-issue and an agent builds it hands-off: it claims the issue, implements on
-its own branch, and opens a draft PR. Automated review (`code-reviewer` then
-`security-reviewer`) and required e2e checks run against the PR; a human
-merges to `main` once green, which deploys a preview. Run
-[`setup-skills`](.cursor/skills/setup-skills/SKILL.md) once to wire up the
-issue tracker, triage labels, and domain docs this loop depends on.
+Tracker ops for Windwaker and related workflows live in
+[`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md). Run
+[`setup-skills`](.cursor/skills/setup-skills/SKILL.md) once to wire the
+tracker and domain docs.
 
 ## Releases
 

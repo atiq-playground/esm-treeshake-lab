@@ -6,7 +6,7 @@ alwaysApply: false
 
 > This file covers **React hooks** (`useState`, `useEffect`, `useMemo`, `useCallback`, custom hooks): NOT the Claude Code `hooks/` runtime system. Naming matches the per-language convention `rules/<lang>/hooks.md` used across this repo.
 >
-> Extends [typescript/patterns.mdc](../typescript/patterns.mdc) and [common/patterns.mdc](../common/patterns.mdc).
+> Extends [typescript/patterns.mdc](../typescript/patterns.mdc).
 
 ## Rules of Hooks
 

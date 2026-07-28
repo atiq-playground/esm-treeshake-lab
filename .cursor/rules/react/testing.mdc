@@ -4,7 +4,7 @@ alwaysApply: false
 ---
 # React Testing
 
-> This file extends [typescript/testing.mdc](../typescript/testing.mdc) and [common/testing.mdc](../common/testing.mdc) with React specific content.
+> This file extends [typescript/testing.mdc](../typescript/testing.mdc) with React specific content.
 
 ## Library Choice
 

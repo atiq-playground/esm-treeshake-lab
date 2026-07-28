@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { GitHubIcon, LinkedInIcon, XIcon } from "@/components/brand-icons";
+import { PackagingCodeExampleSection } from "@/components/packaging-code-example-section";
 import { PackagingMetaphor } from "@/components/packaging-metaphor";
 import { SupportCta } from "@/components/support-cta";
 import { QuickFacts } from "@/components/quick-facts";
@@ -44,6 +45,8 @@ export default async function HomePage() {
             caseTitle={peak.plainTitle}
           />
         </section>
+
+        <PackagingCodeExampleSection />
 
         <section className="flex flex-col gap-3">
           <p className="lab-label">Worker / deploy artifact</p>

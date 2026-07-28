@@ -2,7 +2,7 @@
 
 - **Date:** 2026-07-22
 - **Ticket:** [Research Next + tsc namespace tree-shaking](https://github.com/atiq-playground/esm-treeshake-lab/issues/3)
-- **Decision:** [ADR 0001 — namespace-shaped `export const`](../adr/0001-namespace-shaped-const-over-export-namespace.md)
+- **Decision (historical):** [ADR 0001](../adr/0001-namespace-shaped-const-over-export-namespace.md) — originally preferred namespace-shaped `export const`; **superseded**: lab stubs are named exports only.
 - **Stack under test:** Next.js `16.2.10` (Turbopack default production build; webpack via `next build --webpack`), TypeScript `^5`, Bun workspaces
 
 ## Question
@@ -19,7 +19,7 @@ Also capture: required `package.json` `exports` / `type` shape, whether `transpi
 4. **`transpilePackages` is not required** when packages ship plain JS via `exports` → `dist/` (Next’s docs say you can build to JS and point `main`/`exports` at it instead of listing the package).
 5. **Recommended package shape for shakeability:** `"type": "module"`, conditional `exports` pointing at `dist`, and `"sideEffects": false` (webpack’s documented hint; harmless for the const-object case that already shook without it in our trials).
 
-**Decision:** prefer namespace-shaped `export const` over true `export namespace` when unused-member shake-out matters — [ADR 0001](../adr/0001-namespace-shaped-const-over-export-namespace.md).
+**Historical decision:** prefer namespace-shaped `export const` over true `export namespace` for Next member shake-out — [ADR 0001](../adr/0001-namespace-shaped-const-over-export-namespace.md). **Lab stubs now:** named function exports only (ADR superseded); this matrix remains the Next/`tsc` emit reference.
 
 ---
 
@@ -183,5 +183,5 @@ rg -n -e "$UNUSED" .next -g '*.map' || echo '(none in maps either)'
 
 ### Related
 
-- [ADR 0001](../adr/0001-namespace-shaped-const-over-export-namespace.md): locks namespace-shaped `export const` for lab stubs
+- [ADR 0001](../adr/0001-namespace-shaped-const-over-export-namespace.md): superseded — lab stubs are named exports only
 - [Lock account SDK demo API](https://github.com/atiq-playground/esm-treeshake-lab/issues/2): original marker strings and demo call sites

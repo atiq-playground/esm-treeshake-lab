@@ -131,8 +131,12 @@ body {
   gap: 1rem;
 }
 
+.lab-facts :where(h2, p, ul, li) {
+  margin: 0;
+}
+
 .lab-facts-compact {
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .lab-facts-list {
@@ -154,14 +158,26 @@ body {
   outline: none;
 }
 
+.lab-facts-compact .lab-fact {
+  gap: 0.35rem;
+  padding: 0.55rem 0;
+}
+
 .lab-fact:focus-visible {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
+/* Fixed 2-col grid so vertical hairlines stack across rows (not content-width). */
 @media (min-width: 640px) {
   .lab-fact {
-    flex-direction: row;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 14rem;
+    align-items: start;
+    gap: 0;
+  }
+
+  .lab-facts-compact .lab-fact {
+    grid-template-columns: minmax(0, 1fr) 10rem;
     gap: 0;
   }
 }
@@ -170,8 +186,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  flex: 1 1 0;
   min-width: 0;
+}
+
+.lab-facts-compact .lab-fact-measure {
+  gap: 0.2rem;
 }
 
 @media (min-width: 640px) {
@@ -179,31 +198,30 @@ body {
     padding-right: 1.25rem;
     border-right: 1px solid var(--border-visible);
   }
+
+  .lab-facts-compact .lab-fact-measure {
+    padding-right: 0.85rem;
+  }
 }
 
 .lab-fact-example {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  flex: 0 1 14rem;
   min-width: 0;
 }
 
 @media (min-width: 640px) {
   .lab-fact-example {
     padding-left: 1.25rem;
-    justify-content: center;
+    /* Top-align with measure so vignette shares the row’s top hairline. */
+    justify-content: flex-start;
+    padding-top: 0.15rem;
   }
-}
 
-.lab-facts-compact .lab-fact-example {
-  flex-basis: auto;
-  justify-content: flex-start;
-}
-
-@media (min-width: 640px) {
   .lab-facts-compact .lab-fact-example {
-    justify-content: center;
+    padding-left: 0.85rem;
+    padding-top: 0.05rem;
   }
 }
 
@@ -243,6 +261,12 @@ body {
   color: var(--text-display);
 }
 
+.lab-facts-compact .lab-fact-headline,
+.lab-facts-compact .lab-fact-headline-singleton {
+  font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.35rem);
+  line-height: 1.1;
+}
+
 /* Improvement headlines: fat/slow (red) → lean/fast (green) */
 .lab-fact-before {
   color: var(--accent);
@@ -270,6 +294,10 @@ body {
   list-style: none;
 }
 
+.lab-facts-compact .lab-fact-tags {
+  gap: 0.25rem;
+}
+
 .lab-fact-tags li {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -283,10 +311,26 @@ body {
   background: var(--surface-raised);
 }
 
+.lab-facts-compact .lab-fact-tags li {
+  padding: 0.18rem 0.4rem;
+}
+
 .lab-fact-detail {
   font-size: var(--caption);
   line-height: 1.4;
   color: var(--text-secondary);
+}
+
+.lab-facts-compact .lab-fact-detail {
+  line-height: 1.3;
+}
+
+.lab-facts-compact .lab-fact-expand {
+  line-height: 1.35;
+}
+
+.lab-facts-compact .lab-fact-caveat {
+  margin-top: 0.15rem;
 }
 
 .lab-fact-expand {
@@ -349,4 +393,153 @@ body {
   line-height: 1.4;
   letter-spacing: 0.02em;
   color: var(--text-disabled);
+}
+
+/* Landing: Resend-style language tabs + BAD / GOOD panels */
+.lab-code-example {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.lab-code-example-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--heading);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--text-display);
+}
+
+.lab-code-example-lead {
+  margin: 0;
+  max-width: 40rem;
+  font-size: var(--body);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.lab-code-example-why {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--label);
+  letter-spacing: 0.04em;
+  color: var(--text-disabled);
+}
+
+.lab-code-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--border-visible);
+  scrollbar-width: thin;
+}
+
+.lab-code-tab {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.lab-code-tab:hover {
+  color: var(--text-primary);
+}
+
+.lab-code-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lab-code-tab-active {
+  color: var(--text-display);
+  border-bottom-color: var(--accent);
+}
+
+.lab-code-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 900px) {
+  .lab-code-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+}
+
+.lab-code-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border-visible);
+  background: var(--surface);
+}
+
+.lab-code-panel-label {
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--border-visible);
+  font-family: var(--font-mono);
+  font-size: var(--label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lab-code-panel-bad .lab-code-panel-label {
+  color: var(--accent);
+}
+
+.lab-code-panel-good .lab-code-panel-label {
+  color: var(--success);
+}
+
+.lab-code-pre {
+  margin: 0;
+  overflow-x: auto;
+  background: var(--black);
+}
+
+/* Shiki dual theme (github-light / github-dark), panel owns the chrome */
+.lab-code-pre .shiki {
+  margin: 0;
+  padding: 0.85rem;
+  overflow-x: auto;
+  background: transparent !important;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+.lab-code-pre .shiki code {
+  font-family: inherit;
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
+.lab-code-pre .shiki,
+.lab-code-pre .shiki span {
+  color: var(--shiki-light);
+}
+
+.dark .lab-code-pre .shiki,
+.dark .lab-code-pre .shiki span {
+  color: var(--shiki-dark);
 }

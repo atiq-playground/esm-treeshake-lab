@@ -4,7 +4,7 @@ alwaysApply: false
 ---
 # React Patterns
 
-> This file extends [typescript/patterns.mdc](../typescript/patterns.mdc) and [common/patterns.mdc](../common/patterns.mdc) with React specific content. For hook-specific rules see [hooks.mdc](./hooks.mdc).
+> This file extends [typescript/patterns.mdc](../typescript/patterns.mdc) with React specific content. For hook-specific rules see [hooks.mdc](./hooks.mdc).
 
 ## Container / Presentational Split
 

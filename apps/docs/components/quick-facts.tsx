@@ -111,10 +111,20 @@ export function QuickFacts({ summary, compact = false }: Props) {
 
   return (
     <section
-      className={compact ? "lab-facts lab-facts-compact" : "lab-facts"}
+      className={
+        compact
+          ? "lab-facts lab-facts-compact not-prose"
+          : "lab-facts not-prose"
+      }
       aria-labelledby="quick-facts-heading"
     >
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+      <div
+        className={
+          compact
+            ? "flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
+            : "flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6"
+        }
+      >
         <h2 id="quick-facts-heading" className="lab-label">
           Quick facts
         </h2>
