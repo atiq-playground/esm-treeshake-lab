@@ -207,9 +207,11 @@ const report = {
   mode,
   note:
     "Node cold import: wall time to first module evaluation + process RSS/heap after import. " +
-    "Fresh child process per arm. Workers/workerd isolate boot is not measured here (too heavy/noisy for the lab).",
+    "esbuild finishes before the clock; each arm times import of one already-bundled .mjs in a fresh child process. " +
+    "Workers/workerd isolate boot is not measured here (too heavy/noisy for the lab).",
   methodologyLimits:
-    "RSS includes Node baseline + V8 heap for the bundled graph — not a Cloudflare Worker isolate. " +
+    "RSS includes ~45 MB Node baseline + V8 heap for the bundled graph — not a Cloudflare Worker isolate. " +
+    "Smoke N=3 fixtures are tiny (KB-scale), so absolute RSS/import look almost flat; research --n=50 widens import ms. " +
     "Import ms is one-shot (no warmup average). Order-of-magnitude evidence that retained JS costs parse/memory, not a production SLO.",
   arms: {
     singleton: {

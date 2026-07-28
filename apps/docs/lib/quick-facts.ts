@@ -166,6 +166,11 @@ function coldStartFact(report?: BenchmarkReport): QuickFact {
         ? byteParts(report.benefit.rssBytesSaved).primary
         : null);
     const importSaved = report.benefit.importMsSavedPct;
+    const smokeOrTinyRss =
+      report.mode === "smoke" ||
+      report.n <= 3 ||
+      (report.benefit.rssBytesSavedPct != null &&
+        report.benefit.rssBytesSavedPct < 1);
     return {
       id: "cold-start",
       label: "Cold start / memory",
@@ -178,8 +183,9 @@ function coldStartFact(report?: BenchmarkReport): QuickFact {
         ".",
       evidence: "measured",
       badge: "Measured",
-      caveat:
-        "Node process RSS/import — not Workers isolate boot. Node baseline dominates absolute RSS.",
+      caveat: smokeOrTinyRss
+        ? "Times one already-bundled .mjs per arm (esbuild done before the clock) — not multi-module load or Workers isolate boot. Absolute RSS ≈ Node baseline (~45 MB), so smoke N looks almost flat; prefer import ms at --n=50 or deploy-byte benches for the real gap."
+        : "Node cold import of an already-bundled .mjs — not Workers isolate boot. Absolute RSS includes ~45 MB Node baseline; use import ms + RSS Δ, not absolute RSS.",
       emphasis: "esm",
     };
   }

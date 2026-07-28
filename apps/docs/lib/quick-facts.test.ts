@@ -234,7 +234,42 @@ describe("toQuickFacts", () => {
     expect(fact?.headline).toBe("1.97 ms → 0.33 ms");
     expect(fact?.detail).toMatch(/83\.2%/);
     expect(fact?.detail).toMatch(/RSS/i);
-    expect(fact?.caveat?.toLowerCase()).toMatch(/node|isolate/);
+    expect(fact?.caveat?.toLowerCase()).toMatch(/bundled|baseline|isolate/);
+  });
+
+  test("caveats louder when coldstart report is smoke N with tiny RSS Δ", () => {
+    const summary = toQuickFacts(landing, {
+      coldstart: {
+        ...coldstartReport(),
+        n: 3,
+        mode: "smoke",
+        arms: {
+          singleton: {
+            bytes: 8337,
+            buildMs: 16,
+            importMs: 0.5,
+            rssBytes: 47_230_976,
+            heapUsedBytes: 4_229_560,
+          },
+          esm: {
+            bytes: 192,
+            buildMs: 3,
+            importMs: 0.33,
+            rssBytes: 47_206_400,
+            heapUsedBytes: 4_207_968,
+          },
+        },
+        benefit: {
+          importMsSaved: 0.17,
+          importMsSavedPct: 34,
+          rssBytesSaved: 24_576,
+          rssBytesSavedPct: 0.1,
+        },
+      },
+    });
+    const fact = summary.facts.find((f) => f.id === "cold-start");
+    expect(fact?.headline).toBe("0.5 ms → 0.33 ms");
+    expect(fact?.caveat?.toLowerCase()).toMatch(/smoke|almost flat|n=50|deploy-byte/);
   });
 
   test("omits third-party fact and keeps operator many-consumers without extended reports", () => {
