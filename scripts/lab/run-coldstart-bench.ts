@@ -1,9 +1,12 @@
 /**
  * Cold-start / RSS harness: Node import wall time + process memory for
- * singleton vs ESM smoke bundles.
+ * singleton vs ESM fixtures.
  *
  * Workers isolate boot (workerd/miniflare) is intentionally out of scope —
  * too heavy and noisy for CI. Documented as a methodology limit.
+ *
+ * Default N=50 writes research-scale docs/lab/benchmark-coldstart-latest.*.
+ * Smoke override `--n=3` asserts only (does not overwrite published latest).
  *
  *   bun run scripts/lab/run-coldstart-bench.ts
  *   bun run scripts/lab/run-coldstart-bench.ts --n=3
@@ -34,9 +37,9 @@ function argValue(flag: string): string | undefined {
   return hit?.slice(flag.length + 1);
 }
 
-const n = Number(argValue("--n") ?? "3");
+const n = Number(argValue("--n") ?? "50");
 if (!Number.isFinite(n) || n < 3 || n > 100) {
-  console.error("Invalid --n (3..100); coldstart defaults to smoke N=3");
+  console.error("Invalid --n (3..100); coldstart defaults to research N=50");
   process.exit(2);
 }
 
@@ -211,7 +214,7 @@ const report = {
     "Workers/workerd isolate boot is not measured here (too heavy/noisy for the lab).",
   methodologyLimits:
     "RSS includes ~45 MB Node baseline + V8 heap for the bundled graph — not a Cloudflare Worker isolate. " +
-    "Smoke N=3 fixtures are tiny (KB-scale), so absolute RSS/import look almost flat; research --n=50 widens import ms. " +
+    "Published latest uses research N=50 (smoke --n=3 is CI-local only and does not overwrite this artifact). " +
     "Import ms is one-shot (no warmup average). Order-of-magnitude evidence that retained JS costs parse/memory, not a production SLO.",
   arms: {
     singleton: {
@@ -243,10 +246,6 @@ const report = {
     rssSizeSaved: byteParts(benefit.rssBytesSaved),
   },
 };
-
-const jsonPath = join(DOCS_LAB, `${reportBase}.json`);
-const mdPath = join(DOCS_LAB, `${reportBase}.md`);
-writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n");
 
 const md = `# Cold start / RSS (Node)
 
@@ -285,7 +284,20 @@ bun run lab:bench:coldstart -- --n=3
 \`\`\`
 `;
 
+const publishLatest = mode !== "smoke";
+let jsonPath = join(OUT_DIR, `${reportBase}.json`);
+let mdPath = join(OUT_DIR, `${reportBase}.md`);
+if (publishLatest) {
+  jsonPath = join(DOCS_LAB, `${reportBase}.json`);
+  mdPath = join(DOCS_LAB, `${reportBase}.md`);
+}
+writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n");
 writeFileSync(mdPath, md);
+if (!publishLatest) {
+  console.warn(
+    "Smoke N=3: wrote report under tmp/ only (does not overwrite docs/lab published latest).",
+  );
+}
 
 console.log(`
 ╔══════════════════════════════════════════╗
@@ -299,8 +311,8 @@ console.log(`
   saved import ${benefit.importMsSaved} ms (${benefit.importMsSavedPct}%)
   saved RSS    ${formatBytesDetail(benefit.rssBytesSaved)} (${benefit.rssBytesSavedPct}%)
 
-  → docs/lab/${reportBase}.md
-  → docs/lab/${reportBase}.json
+  → ${publishLatest ? `docs/lab/${reportBase}` : `tmp/lab-bench/coldstart/${reportBase}`}.md
+  → ${publishLatest ? `docs/lab/${reportBase}` : `tmp/lab-bench/coldstart/${reportBase}`}.json
 `);
 
 const esmFasterOrEqual = esmProbe.importMs <= singletonProbe.importMs * 1.5;

@@ -269,7 +269,7 @@ describe("toQuickFacts", () => {
     });
     const fact = summary.facts.find((f) => f.id === "cold-start");
     expect(fact?.headline).toBe("0.5 ms → 0.33 ms");
-    expect(fact?.caveat?.toLowerCase()).toMatch(/smoke|almost flat|n=50|deploy-byte/);
+    expect(fact?.caveat?.toLowerCase()).toMatch(/smoke|almost flat|n=50|research/);
   });
 
   test("omits third-party fact and keeps operator many-consumers without extended reports", () => {

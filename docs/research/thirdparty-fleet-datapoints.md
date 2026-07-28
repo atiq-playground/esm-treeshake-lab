@@ -48,9 +48,9 @@ UC1–UC4 isolate the **first-party** module graph (GraphQL-shaped framing on th
 
 - Bundle singleton vs ESM fixtures, then spawn a **fresh Node process** per arm.
 - Capture wall time to first module evaluation + `process.memoryUsage()` RSS/heap.
-- Default research sample: `--n=50`. Smoke-friendly: `--n=3`.
+- **Default N=50** (publishes `docs/lab/benchmark-coldstart-latest.*`). Smoke override: `--n=3` (writes `tmp/` only).
 - **Not measured:** workerd/miniflare isolate boot (too heavy/noisy for this lab).
-- Report: `docs/lab/benchmark-coldstart-latest.*`.
+- Report: `docs/lab/benchmark-coldstart-latest.*` (research-scale only).
 
 ## Commands
 
@@ -61,7 +61,7 @@ bun run lab:bench:thirdparty:real -- --n=100
 bun run lab:bench:thirdparty:real -- --n=3 --3p-count=2
 bun run lab:bench:fleet -- --n=50 --consumers=100
 bun run lab:bench:fleet -- --n=3 --consumers=10 --fleet-mode=both
-bun run lab:bench:coldstart -- --n=50
+bun run lab:bench:coldstart
 bun run lab:bench:coldstart -- --n=3
 ```
 
@@ -91,13 +91,13 @@ bun run lab:bench:coldstart -- --n=3
 - **Stub 3p ≠ real deps**, but **`--3p=real` is real pinned npm** (graphql stack + common SDK weight). Still not a full production peer tree, native addons, or Workers-specific bundler settings.
 - **Shared core is paid on both arms** once any domain package is imported. The differential is unused extras + first-party registry weight.
 - **Fleet naive is multiplication**; **fleet shared is measured multi-entry**. Neither models CDN caches or per-app bind differences.
-- **Cold start is Node**, not workerd isolate boot. Absolute RSS includes ~45 MB Node baseline; use import ms + RSS Δ as the signal.
-- **CI:** keep default smoke on UC1 N=3. Extended benches are local/research (optional light N=3 checks are fine).
+- **Cold start is Node**, not workerd isolate boot. Absolute RSS includes ~45 MB Node baseline; use import ms + RSS Δ as the signal. Published latest is research N=50 (smoke `--n=3` → tmp only).
+- **CI:** `lab:bench:smoke` stays UC1 N=3 asserts and does **not** overwrite `docs/lab` latest. Extended benches are local/research (optional light N=3 checks are fine for thirdparty/fleet).
 
 ## Suggested next steps
 
 | Goal | Suggestion |
 |------|------------|
-| CI optional | `lab:bench:thirdparty -- --n=3 --3p-count=2 --3p-bytes=2048` + `lab:bench:fleet -- --n=3 --consumers=10` + `lab:bench:coldstart -- --n=3` (not required for merge). |
-| Research | Local: `lab:bench:thirdparty:real -- --n=100`; fleet `--fleet-mode=both`; coldstart `--n=50`. |
+| CI optional | `lab:bench:thirdparty -- --n=3 --3p-count=2 --3p-bytes=2048` + `lab:bench:fleet -- --n=3 --consumers=10` + `lab:bench:coldstart -- --n=3` (not required for merge; smoke paths do not publish latest). |
+| Research | Local: `lab:bench:thirdparty:real -- --n=100`; fleet `--fleet-mode=both`; coldstart (default N=50). Growth ladder: UC1 `--n=500|1000`. |
 | Workers | Separate isolate-boot harness (miniflare/workerd) if someone needs Worker-shaped RSS — out of scope for current CI budget. |

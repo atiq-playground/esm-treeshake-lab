@@ -36,20 +36,22 @@ bun run dev          # docs at http://localhost:3000
 
 Compares **global singleton plugins** (import all N → register) vs **ESM** (import only what you call). Host: **esbuild**.
 
+**Published vs CI:** Homepage / Quick Facts cite committed `docs/lab/benchmark-*-latest.*` at research scale (UC1–UC4 **N=100** landing-shaped, fleet **N=50×M=100**, coldstart **N=50**, 3p **N=100**). `lab:bench:smoke` is CI-only (N=3 asserts) and **does not** overwrite those artifacts.
+
 **Surface vs call sites:** `--fns` = functions *defined* per package. `--used=K` = resolvers bound (1 fn ≈ 1 field). Landing uses ~2–5/pkg, not a single toy import.
 
 | Case | Command | Surface / graph | ESM call sites | Report |
 |------|---------|-----------------|----------------|--------|
-| UC1 baseline | `lab:bench:smoke` / `lab:bench -- --n=100 --used=200` | 2 fns/svc | **K** (landing **~2/pkg**; smoke **1**) | `benchmark-latest.*` (home + CI) |
+| UC1 baseline | `lab:bench -- --n=100 --used=200` | 2 fns/svc | **K** (landing **~2/pkg**) | `benchmark-latest.*` (home) |
 | UC2 wide | `lab:bench:wide -- --n=100 --used=300` | `--fns=20` | **K** (landing **~3/pkg**) | `benchmark-wide-latest.*` |
 | UC3 cycles | `lab:bench:cycles -- --n=100 --used=300` | wide + package ring | **K** (landing **~3/pkg**) | `benchmark-cycles-latest.*` |
 | UC4 partial | `lab:bench:partial -- --n=100 --used=500` | `--fns` surface; needs K | **K** (landing **~5/pkg**) | `benchmark-partial-latest.*` |
 | Third-party ballast | `lab:bench:thirdparty -- --n=100` | UC1 surface + stub `@lab/3p-*` | **1** (svc-0) | `benchmark-thirdparty-latest.*` |
 | Real npm 3p | `lab:bench:thirdparty:real -- --n=100` | pinned graphql + unused SDK extras | **1** (svc-0) | `benchmark-thirdparty-real-latest.*` |
 | Multi-consumer fleet | `lab:bench:fleet -- --n=50 --consumers=100` | UC1 × M (naive + shared multi-entry) | **1** per app | `benchmark-fleet-latest.*` |
-| Cold start / RSS | `lab:bench:coldstart -- --n=50` | Node import ms + RSS | smoke/generated fixtures | `benchmark-coldstart-latest.*` |
+| Cold start / RSS | `lab:bench:coldstart` (default **N=50**) | Node import ms + RSS | generated fixtures | `benchmark-coldstart-latest.*` |
 
-**Smoke (CI): UC1 only**
+**Smoke (CI only): UC1 N=3 — asserts, no published overwrite**
 
 ```bash
 bun run lab:bench:smoke
@@ -58,7 +60,7 @@ bun run lab:bench:smoke
 **Full local (landing-shaped: ~2–5 resolvers per domain package)**
 
 ```bash
-# 1 fn ≈ 1 GraphQL field resolver
+# 1 fn ≈ 1 GraphQL field resolver — published homepage defaults
 bun run lab:bench -- --n=100 --used=200          # ~2/pkg (lean surface)
 bun run lab:bench:wide -- --n=100 --used=300     # ~3/pkg of ~20
 bun run lab:bench:cycles -- --n=100 --used=300
@@ -67,20 +69,22 @@ bun run lab:bench:partial -- --n=100 --used=500  # ~5/pkg of ~20
 # optional: shuffle which K surface fns (reproducible)
 bun run lab:bench:partial -- --n=100 --used=500 --seed=42
 
-# optional stress ladder (see docs/research/scale-bench-n1000-bun-esbuild.md)
-bun run lab:bench -- --n=1000
+# growth ladder (org-scale; longer generate + install)
+bun run lab:bench -- --n=500 --used=1000
+bun run lab:bench -- --n=1000 --used=2000
 # full N × use-case practicality sweep → docs/research/scale-bench-sweep.json
 bun run lab:probe:scale
 
-# extended datapoints (sibling reports; not CI smoke)
+# extended datapoints (sibling reports; defaults are research-scale)
 bun run lab:bench:thirdparty -- --n=100
 bun run lab:bench:thirdparty -- --n=3 --3p-count=2 --3p-bytes=2048   # tiny local check
 bun run lab:bench:thirdparty:real -- --n=100                          # pinned npm graphql stack
 bun run lab:bench:fleet -- --n=50 --consumers=100                     # naive ×M + shared multi-entry
-bun run lab:bench:coldstart -- --n=50                                 # Node import ms + RSS
+bun run lab:bench:coldstart                                           # Node import ms + RSS @ N=50
+bun run lab:bench:coldstart -- --n=3                                  # smoke assert only
 ```
 
-Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
+Variants never overwrite `benchmark-latest.*` (docs home stays on UC1). Smoke / `--n=3` coldstart write under `tmp/` only.
 
 **Outputs**
 
@@ -105,7 +109,7 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
 | `preview` | OpenNext build + local Workers runtime |
 | `deploy` | OpenNext build + deploy to Cloudflare Workers |
 | `lab:generate` | Generate N singleton + ESM stub packages |
-| `lab:bench:smoke` | UC1 N=3 scale bench (CI) |
+| `lab:bench:smoke` | CI-only UC1 N=3 asserts (does **not** overwrite `docs/lab` latest) |
 | `lab:bench` | UC1 full scale bench (default N=100) |
 | `lab:bench:wide` | UC2: many fns/svc defined (ESM still calls 1) |
 | `lab:bench:cycles` | UC3: wide + cyclic package ring |
@@ -113,7 +117,7 @@ Variants never overwrite `benchmark-latest.*` (docs home stays on UC1).
 | `lab:bench:thirdparty` | Stub third-party ballast (`@lab/3p-*`) + first-party graph |
 | `lab:bench:thirdparty:real` | Real pinned npm 3p (`--3p=real`: graphql + SDK extras) |
 | `lab:bench:fleet` | Multi-consumer fleet (`--fleet-mode=both`: naive ×M + shared) |
-| `lab:bench:coldstart` | Node cold import wall time + RSS (singleton vs ESM) |
+| `lab:bench:coldstart` | Node cold import + RSS (default N=50; `--n=3` smoke → tmp only) |
 | `lab:probe:scale` | N × UC practicality sweep → `docs/research/scale-bench-sweep.json` |
 
 ## Map

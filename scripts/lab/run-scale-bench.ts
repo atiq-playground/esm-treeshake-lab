@@ -755,8 +755,13 @@ const report = {
         : undefined,
 };
 
-const jsonPath = join(DOCS_LAB, `${reportBase}.json`);
-const mdPath = join(DOCS_LAB, `${reportBase}.md`);
+const publishLatest = !smoke && n > 3;
+const jsonPath = publishLatest
+  ? join(DOCS_LAB, `${reportBase}.json`)
+  : join(OUT_DIR, `${reportBase}.json`);
+const mdPath = publishLatest
+  ? join(DOCS_LAB, `${reportBase}.md`)
+  : join(OUT_DIR, `${reportBase}.md`);
 
 writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n");
 
@@ -885,6 +890,13 @@ bun run lab:bench:coldstart
 `;
 
 writeFileSync(mdPath, md);
+if (!publishLatest) {
+  console.warn(
+    smoke || n <= 3
+      ? "Smoke/tiny N=3: wrote report under tmp/ only (does not overwrite docs/lab published latest)."
+      : "Skipping docs/lab publish for this run.",
+  );
+}
 
 const bar = (pct: number) => {
   const w = 20;
@@ -931,8 +943,8 @@ ${thirdParty ? `  3p=${thirdParty.mode}:${thirdParty.count}×${thirdParty.bytesP
   unused removed  ${unusedRemovedPct}%  (Δ ${unusedMarkersDelta})
   ${bar(bytesSavedPct)}
 ${fleetLog}
-  → docs/lab/${reportBase}.md
-  → docs/lab/${reportBase}.json
+  → ${publishLatest ? `docs/lab/${reportBase}` : `tmp/lab-bench/${reportBase}`}.md
+  → ${publishLatest ? `docs/lab/${reportBase}` : `tmp/lab-bench/${reportBase}`}.json
 `);
 
 const unusedPerSvc = fns - 1;
