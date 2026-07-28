@@ -62,12 +62,12 @@ Refs: [#37](https://github.com/atiq-playground/esm-treeshake-lab/issues/37)
 
 - [ ] New `scripts/lab/run-request-bench.ts` + `"lab:bench:request"`
 - [ ] Leave `lab:bench:coldstart` as import + RSS only
-- [ ] Per arm: thin Node HTTP server importing that arm’s bundle
+- [ ] Per arm: thin Node HTTP server importing that arm’s bundle (**fresh Node process** — isolated RSS/heap)
 - [ ] `POST /invoke` = one full pass of all wired call sites (~1000)
 - [ ] Defaults: warmup **50** (discard), measured **1000**, concurrency **1**
-- [ ] Metrics: p50/p95 latency, `process.cpuUsage` delta, RSS/heap
+- [ ] Metrics: p50/p95 latency, `process.cpuUsage` delta, RSS/heap (from that arm’s child only)
 - [ ] Write `request.singleton` / `request.esm` once (not × warm/cold)
-- [ ] Required disclaimer: Node on GHA/local ≠ CF isolate / prod gateway RPS
+- [ ] Required disclaimer: fresh process per arm; Node on GHA/local ≠ CF isolate / prod gateway RPS
 
 Refs: [#38](https://github.com/atiq-playground/esm-treeshake-lab/issues/38)
 

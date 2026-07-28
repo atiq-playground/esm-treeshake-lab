@@ -29,8 +29,8 @@ _Avoid_: calling warm/cold “arms”
 _Avoid_: blending cache modes into one score; CF publish fields for the bench
 
 **Request-time harness**:
-Sibling `lab:bench:request`: local Node HTTP per arm; `POST /invoke` runs one full pass of wired call sites; defaults warmup 50 / measured 1000 / concurrency 1; fills `request` in the realistic report once per arm. Relative metrics only — not CF isolate or prod gateway RPS.
-_Avoid_: hitting the docs Worker; multiplying request metrics by warm/cold install mode
+Sibling `lab:bench:request`: local Node HTTP per arm in a **fresh Node process** (isolated RSS/heap); `POST /invoke` runs one full pass of wired call sites; defaults warmup 50 / measured 1000 / concurrency 1; fills `request` in the realistic report once per arm. Relative metrics only — not CF isolate or prod gateway RPS.
+_Avoid_: hitting the docs Worker; measuring both arms in one process; multiplying request metrics by warm/cold install mode
 
 **Realistic GHA proof**:
 On-demand workflow `lab-realistic-bench.yml` (`workflow_dispatch` only): one job runs cold→warm→request, uploads artifacts, opens a PR with `benchmark-realistic-latest.*` for human merge. Not on every push/PR.

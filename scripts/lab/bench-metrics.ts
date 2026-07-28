@@ -367,7 +367,7 @@ export type RequestReport = {
 } | null;
 
 export const REQUEST_DISCLAIMER =
-  "Node HTTP on GitHub Actions / local is not a Cloudflare isolate boot and is not production gateway RPS. Relative arm comparison only.";
+  "Fresh Node process per arm (isolated RSS/heap). Node HTTP on GitHub Actions / local is not a Cloudflare isolate boot and is not production gateway RPS. Relative arm comparison only.";
 
 export const REQUEST_BENCH_DEFAULTS = {
   warmup: 50,
