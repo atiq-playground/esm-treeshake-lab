@@ -20,13 +20,25 @@ type Props = {
 type ChartRow = UseCaseComparisonRow & {
   singletonKb: number;
   esmKb: number;
-  /** Plot height for ESM; floored so hairline wins stay visible. */
+  /** Plot length for ESM; floored so hairline wins stay visible. */
   esmKbPlot: number;
   factorLabel: string;
 };
 
-/** ~1.5% of axis — enough to see, labels carry the real KB. */
+/** Recharts Label content props — Cartesian viewBox only for our bar labels. */
+type LabelGeom = {
+  x?: number | string;
+  y?: number | string;
+  width?: number | string;
+  height?: number | string;
+  index?: number;
+  viewBox?: unknown;
+};
+
+/** ~1.5% of axis — enough to see; labels carry the real size. */
 const STUB_FRACTION = 0.015;
+/** Gap between bar end and size/× text in the right gutter. */
+const LABEL_GUTTER = 10;
 
 function toChartRows(rows: UseCaseComparisonRow[], topKb: number): ChartRow[] {
   const stubKb = Math.max(topKb * STUB_FRACTION, 8);
@@ -54,16 +66,9 @@ function toChartRows(rows: UseCaseComparisonRow[], topKb: number): ChartRow[] {
 
 function formatKbTick(value: number): string {
   if (value === 0) return "0 KB";
+  if (value >= 1024) return `${(value / 1024).toFixed(1)} MB`;
   if (value >= 1) return `${Math.round(value)} KB`;
   return `${value.toFixed(1)} KB`;
-}
-
-function formatBarKb(bytes: number): string {
-  const kb = bytes / 1024;
-  if (kb >= 100) return `${Math.round(kb)} KB`;
-  if (kb >= 10) return `${kb.toFixed(0)} KB`;
-  if (kb >= 1) return `${kb.toFixed(1)} KB`;
-  return `${Math.round(bytes)} B`;
 }
 
 function CaseTick({
@@ -80,7 +85,7 @@ function CaseTick({
       x={x}
       y={y}
       dy={4}
-      textAnchor="middle"
+      textAnchor="end"
       fill="var(--text-secondary)"
       fontSize={11}
       fontFamily="var(--font-mono)"
@@ -136,66 +141,33 @@ function ChartTooltip({
   );
 }
 
-/** Gutter above bar top — never draw size/factor inside the fill. */
-const LABEL_GAP = {
-  singletonKb: 8,
-  /** Upper line (KB) and lower line (factor), both above the bar. */
-  esmKb: 20,
-  esmFactor: 7,
-} as const;
-
-function SingletonLabel(props: {
-  x?: number | string;
-  y?: number | string;
-  width?: number | string;
-  index?: number;
-  payload?: ChartRow;
-}) {
-  const { x = 0, y = 0, width = 0, payload } = props;
-  if (!payload) return null;
-  const cx = Number(x) + Number(width) / 2;
-  const cy = Number(y);
-  return (
-    <text
-      x={cx}
-      y={cy - LABEL_GAP.singletonKb}
-      textAnchor="middle"
-      fill="var(--text-primary)"
-      fontSize={11}
-      fontFamily="var(--font-mono)"
-      fontWeight={500}
-    >
-      {formatBarKb(payload.singletonBytes)}
-    </text>
-  );
+/**
+ * Recharts 3 LabelList strips `payload` via svgPropertiesAndEvents.
+ * Always resolve the row from `index` + chart data — never from payload.
+ */
+function asBox(
+  viewBox: unknown,
+): { x?: number | string; y?: number | string; width?: number | string; height?: number | string } | null {
+  if (viewBox == null || typeof viewBox !== "object") return null;
+  return viewBox as {
+    x?: number | string;
+    y?: number | string;
+    width?: number | string;
+    height?: number | string;
+  };
 }
 
-function EsmLabel(props: {
-  x?: number | string;
-  y?: number | string;
-  width?: number | string;
-  index?: number;
-  payload?: ChartRow;
-}) {
-  const { x = 0, y = 0, width = 0, payload } = props;
-  if (!payload) return null;
-  const cx = Number(x) + Number(width) / 2;
-  const cy = Number(y);
-  return (
-    <text
-      textAnchor="middle"
-      fontSize={11}
-      fontFamily="var(--font-mono)"
-      fontWeight={500}
-    >
-      <tspan x={cx} y={cy - LABEL_GAP.esmKb} fill="var(--success)">
-        {formatBarKb(payload.esmBytes)}
-      </tspan>
-      <tspan x={cx} y={cy - LABEL_GAP.esmFactor} fill="var(--text-primary)">
-        {payload.factorLabel}
-      </tspan>
-    </text>
-  );
+function barEnd(props: LabelGeom): { x: number; y: number } | null {
+  const box = asBox(props.viewBox);
+  const x0 = Number(box?.x ?? props.x);
+  const y0 = Number(box?.y ?? props.y);
+  const w = Number(box?.width ?? props.width);
+  const h = Number(box?.height ?? props.height);
+  if (![x0, y0, w, h].every(Number.isFinite)) return null;
+  return {
+    x: x0 + w + LABEL_GUTTER,
+    y: y0 + h / 2,
+  };
 }
 
 export function UseCaseComparisonChart({ rows }: Props) {
@@ -206,40 +178,92 @@ export function UseCaseComparisonChart({ rows }: Props) {
   const top = Math.ceil(maxKb / 100) * 100;
   const data = toChartRows(rows, top);
 
+  function SingletonLabel(props: LabelGeom) {
+    const row =
+      typeof props.index === "number" ? data[props.index] : undefined;
+    const end = barEnd(props);
+    if (!row || !end) return null;
+    return (
+      <text
+        x={end.x}
+        y={end.y}
+        dominantBaseline="central"
+        textAnchor="start"
+        fill="var(--text-primary)"
+        fontSize={12}
+        fontFamily="var(--font-mono)"
+        fontWeight={600}
+      >
+        {row.singletonPrimary}
+      </text>
+    );
+  }
+
+  function EsmLabel(props: LabelGeom) {
+    const row =
+      typeof props.index === "number" ? data[props.index] : undefined;
+    const end = barEnd(props);
+    if (!row || !end) return null;
+    return (
+      <text
+        textAnchor="start"
+        fontSize={12}
+        fontFamily="var(--font-mono)"
+        fontWeight={600}
+      >
+        <tspan
+          x={end.x}
+          y={end.y - 7}
+          fill="var(--success)"
+        >
+          {row.esmPrimary}
+        </tspan>
+        <tspan
+          x={end.x}
+          y={end.y + 8}
+          fill="var(--text-primary)"
+        >
+          {row.factorLabel}
+        </tspan>
+      </text>
+    );
+  }
+
   return (
-    <div className="h-80 w-full sm:h-96">
+    <div className="h-[28rem] w-full overflow-visible sm:h-[32rem]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
+          layout="vertical"
           data={data}
-          margin={{ top: 52, right: 8, left: 4, bottom: 12 }}
-          barCategoryGap="28%"
-          barGap={4}
+          margin={{ top: 12, right: 96, left: 8, bottom: 12 }}
+          barCategoryGap="22%"
+          barGap={6}
         >
           <CartesianGrid
-            vertical={false}
+            horizontal={false}
             stroke="var(--border)"
             strokeDasharray="0"
           />
           <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={{ stroke: "var(--border-visible)" }}
-            interval={0}
-            height={48}
-            tickMargin={16}
-            tick={<CaseTick />}
-          />
-          <YAxis
+            type="number"
             domain={[0, top]}
             tickLine={false}
-            axisLine={false}
-            width={56}
+            axisLine={{ stroke: "var(--border-visible)" }}
             tick={{
               fill: "var(--text-secondary)",
               fontSize: 11,
               fontFamily: "var(--font-mono)",
             }}
             tickFormatter={formatKbTick}
+          />
+          <YAxis
+            type="category"
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            width={88}
+            tickMargin={8}
+            tick={<CaseTick />}
           />
           <Tooltip
             content={<ChartTooltip />}
@@ -263,18 +287,20 @@ export function UseCaseComparisonChart({ rows }: Props) {
             name="Load everything"
             fill="var(--accent)"
             radius={0}
-            maxBarSize={36}
+            maxBarSize={22}
           >
-            <LabelList content={<SingletonLabel />} />
+            <LabelList
+              content={(props) => SingletonLabel(props as LabelGeom)}
+            />
           </Bar>
           <Bar
             dataKey="esmKbPlot"
             name="Only what you use"
             fill="var(--success)"
             radius={0}
-            maxBarSize={36}
+            maxBarSize={22}
           >
-            <LabelList content={<EsmLabel />} />
+            <LabelList content={(props) => EsmLabel(props as LabelGeom)} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>
