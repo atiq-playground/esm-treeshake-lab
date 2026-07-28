@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { GitHubIcon, LinkedInIcon, XIcon } from "@/components/brand-icons";
-import {
-  CycleRingMetaphor,
-  PackagingMetaphor,
-} from "@/components/packaging-metaphor";
+import { PackagingMetaphor } from "@/components/packaging-metaphor";
 import { SupportCta } from "@/components/support-cta";
 import { QuickFacts } from "@/components/quick-facts";
 import { UseCaseComparisonChart } from "@/components/use-case-comparison-chart";
@@ -64,7 +61,6 @@ export default async function HomePage() {
             factor={peakFactor}
             caseTitle={peak.plainTitle}
           />
-          <CycleRingMetaphor />
         </section>
 
         <section className="flex flex-col gap-3">

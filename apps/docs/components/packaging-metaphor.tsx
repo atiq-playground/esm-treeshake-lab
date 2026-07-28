@@ -11,18 +11,18 @@ type Props = {
 
 type Dot = "live" | "out";
 
-/** Three packages × five exports — singleton keeps every export live. */
+/** Three packages — singleton keeps every export live. */
 const PKG_SINGLETON: Dot[][] = [
   ["live", "live", "live", "live", "live"],
   ["live", "live", "live", "live", "live"],
   ["live", "live", "live", "live", "live"],
 ];
 
-/** Same boxes; only call-site exports stay lit. */
+/** Same K call sites; only used exports stay lit. */
 const PKG_ESM: Dot[][] = [
-  ["live", "live", "out", "out", "out"],
   ["live", "out", "out", "out", "out"],
-  ["live", "live", "live", "out", "out"],
+  ["live", "out", "out", "out", "out"],
+  ["live", "out", "out", "out", "out"],
 ];
 
 /**
@@ -35,11 +35,11 @@ function bagSize(factor: number): {
   esmW: number;
   esmH: number;
 } {
-  const esmW = 44;
-  const esmH = 52;
+  const esmW = 52;
+  const esmH = 40;
   const scale = Math.sqrt(Math.max(factor, 1));
-  const singletonW = Math.min(168, Math.max(esmW * 1.6, esmW * scale));
-  const singletonH = Math.min(168, Math.max(esmH * 1.5, esmH * scale));
+  const singletonW = Math.min(140, Math.max(esmW * 1.8, esmW * scale * 0.85));
+  const singletonH = Math.min(100, Math.max(esmH * 1.6, esmH * scale * 0.85));
   return { singletonW, singletonH, esmW, esmH };
 }
 
@@ -55,20 +55,22 @@ function PackageBox({
   y,
   stroke,
   liveFill,
+  label,
 }: {
   dots: Dot[];
   x: number;
   y: number;
   stroke: string;
   liveFill: string;
+  label: string;
 }) {
-  const boxW = 56;
-  const boxH = 48;
+  const boxW = 64;
+  const boxH = 36;
   const cols = 5;
-  const r = 3.2;
-  const gap = 8.5;
+  const r = 2.6;
+  const gap = 9.5;
   const startX = x + 10;
-  const startY = y + 14;
+  const startY = y + 20;
 
   return (
     <g>
@@ -82,6 +84,16 @@ function PackageBox({
         stroke={stroke}
         strokeWidth={1.5}
       />
+      <text
+        x={x + 4}
+        y={y + 12}
+        fill={stroke}
+        fontSize={8}
+        fontFamily="var(--font-mono)"
+        letterSpacing="0.04em"
+      >
+        {label}
+      </text>
       {dots.map((dot, i) => {
         const cx = startX + (i % cols) * gap;
         const cy = startY + Math.floor(i / cols) * gap;
@@ -96,7 +108,7 @@ function PackageBox({
             r={r}
             fill="transparent"
             stroke="var(--text-disabled)"
-            strokeWidth={1.25}
+            strokeWidth={1.1}
           />
         );
       })}
@@ -119,7 +131,7 @@ function BundleBag({
   fill: string;
   strokeWidth: number;
 }) {
-  const mouth = Math.min(18, width * 0.2);
+  const mouth = Math.min(16, width * 0.18);
   const top = y;
   const bottom = y + height;
   const left = x;
@@ -137,16 +149,59 @@ function BundleBag({
     <path
       d={d}
       fill={fill}
-      fillOpacity={0.16}
+      fillOpacity={0.14}
       stroke={fill}
       strokeWidth={strokeWidth}
     />
   );
 }
 
+function ArmFrame({
+  x,
+  y,
+  width,
+  height,
+  stroke,
+  title,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  stroke: string;
+  title: string;
+}) {
+  return (
+    <g>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={2}
+        fill="transparent"
+        stroke={stroke}
+        strokeWidth={1}
+        strokeOpacity={0.35}
+      />
+      <text
+        x={x + 10}
+        y={y + 16}
+        fill={stroke}
+        fontSize={10}
+        fontFamily="var(--font-mono)"
+        letterSpacing="0.08em"
+      >
+        {title}
+      </text>
+    </g>
+  );
+}
+
 /**
- * Teaching diagram: packages = boxes, exports = dots, Worker artifact = bag.
- * Left: hub lights every box → huge bag. Right: few lit dots → tiny bag.
+ * Flowchart teaching diagram (mermaid LR → top-split layout):
+ * App/schema at top → dashed edges to Singleton arm (huge bag)
+ * and ESM arm (thin bag). Same K call sites both sides.
  */
 export function PackagingMetaphor({
   singletonSize,
@@ -157,21 +212,45 @@ export function PackagingMetaphor({
   const bags = bagSize(factor);
   const factorText = formatFactor(factor);
 
-  const panelW = 300;
-  const panelH = 268;
-  const gap = 28;
-  const totalW = panelW * 2 + gap;
-  const boxY = 78;
-  const bagFloor = 248;
-  const boxesX = [52, 120, 188];
+  const W = 640;
+  const H = 420;
 
-  const singletonBagX = (panelW - bags.singletonW) / 2;
-  const esmBagX = (panelW - bags.esmW) / 2;
+  // App / schema (top center)
+  const appX = 200;
+  const appY = 8;
+  const appW = 240;
+  const appH = 52;
+  const schemaCx = appX + appW / 2;
+  const schemaCy = appY + appH;
+
+  // Arms
+  const armY = 100;
+  const armH = 300;
+  const armW = 290;
+  const leftX = 16;
+  const rightX = 334;
+
+  // Package rows
+  const pkgY = armY + 78;
+  const leftPkgsX = [leftX + 18, leftX + 112, leftX + 206];
+  const rightPkgsX = [rightX + 18, rightX + 112, rightX + 206];
+
+  // Bags sit under packages
+  const bagFloor = armY + armH - 16;
+  const leftBagX = leftX + (armW - bags.singletonW) / 2;
+  const rightBagX = rightX + (armW - bags.esmW) / 2;
+  const leftBagY = bagFloor - bags.singletonH;
+  const rightBagY = bagFloor - bags.esmH;
+
+  // Registry / import entry nodes
+  const entryY = armY + 28;
+  const leftEntryCx = leftX + armW / 2;
+  const rightEntryCx = rightX + armW / 2;
 
   return (
     <figure className="lab-metaphor flex flex-col gap-3">
       <figcaption className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
-        <p className="lab-label">□ box · ● shipped · ○ shaken · bag = bytes</p>
+        <p className="lab-label">□ pkg · ● shipped · ○ shaken · bag = bytes</p>
         <p className="lab-mono text-[length:var(--caption)] text-[color:var(--text-secondary)]">
           {caseTitle} · {factorText}
         </p>
@@ -179,343 +258,323 @@ export function PackagingMetaphor({
 
       <div className="w-full overflow-x-auto">
         <svg
-          viewBox={`0 0 ${totalW} ${panelH}`}
+          viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label={`Package boxes with export dots. Singleton hub ships ${singletonSize}; selective ESM ships ${esmSize} — about ${factorText} smaller.`}
+          aria-label={`Flowchart: schema binds call sites. Singleton arm ships ${singletonSize}; ESM arm ships ${esmSize} — about ${factorText} smaller.`}
           className="mx-auto h-auto w-full max-w-3xl"
         >
-          {/* ── Singleton ── */}
-          <g className="lab-metaphor-panel">
-            <text
-              x={0}
-              y={18}
-              fill="var(--accent)"
-              fontSize={12}
-              fontFamily="var(--font-mono)"
-              letterSpacing="0.1em"
-            >
-              SINGLETON
-            </text>
-            <text
-              x={0}
-              y={36}
-              fill="var(--text-secondary)"
-              fontSize={11}
-              fontFamily="var(--font-sans)"
-            >
-              hub → every box lit → huge bag
-            </text>
-
-            {/* Hub */}
-            <rect
-              x={0}
-              y={boxY + 10}
-              width={36}
-              height={28}
-              rx={1}
-              fill="var(--accent)"
-              fillOpacity={0.14}
-              stroke="var(--accent)"
-              strokeWidth={1.75}
-            />
-            <text
-              x={18}
-              y={boxY + 28}
-              textAnchor="middle"
-              fill="var(--accent)"
-              fontSize={9}
-              fontFamily="var(--font-mono)"
-              letterSpacing="0.08em"
-            >
-              HUB
-            </text>
-
-            {boxesX.map((x, i) => (
-              <line
-                key={`spoke-${i}`}
-                x1={36}
-                y1={boxY + 24}
-                x2={x}
-                y2={boxY + 24}
-                stroke="var(--accent)"
-                strokeWidth={1.25}
-                strokeOpacity={0.5}
-                className="lab-metaphor-spoke"
-              />
-            ))}
-
-            {PKG_SINGLETON.map((dots, i) => (
-              <PackageBox
-                key={i}
-                dots={dots}
-                x={boxesX[i]!}
-                y={boxY}
-                stroke="var(--accent)"
-                liveFill="var(--accent)"
-              />
-            ))}
-
-            {/* Funnel ticks into bag */}
-            <line
-              x1={panelW / 2}
-              y1={boxY + 52}
-              x2={panelW / 2}
-              y2={bagFloor - bags.singletonH - 4}
-              stroke="var(--accent)"
-              strokeWidth={1}
-              strokeOpacity={0.35}
-              strokeDasharray="3 4"
-            />
-
-            <BundleBag
-              x={singletonBagX}
-              y={bagFloor - bags.singletonH}
-              width={bags.singletonW}
-              height={bags.singletonH}
-              fill="var(--accent)"
-              strokeWidth={2.5}
-            />
-            <text
-              x={panelW / 2}
-              y={bagFloor - bags.singletonH / 2 + 5}
-              textAnchor="middle"
-              fill="var(--accent)"
-              fontSize={14}
-              fontFamily="var(--font-mono)"
-              fontWeight={500}
-            >
-              {singletonSize}
-            </text>
-          </g>
-
-          {/* ── ESM ── */}
-          <g
-            className="lab-metaphor-panel"
-            transform={`translate(${panelW + gap}, 0)`}
-          >
-            <text
-              x={0}
-              y={18}
-              fill="var(--success)"
-              fontSize={12}
-              fontFamily="var(--font-mono)"
-              letterSpacing="0.1em"
-            >
-              ESM
-            </text>
-            <text
-              x={0}
-              y={36}
-              fill="var(--text-secondary)"
-              fontSize={11}
-              fontFamily="var(--font-sans)"
-            >
-              few lit dots → tiny bag
-            </text>
-
-            {PKG_ESM.map((dots, i) => (
-              <PackageBox
-                key={i}
-                dots={dots}
-                x={boxesX[i]!}
-                y={boxY}
-                stroke="var(--success)"
-                liveFill="var(--success)"
-              />
-            ))}
-
-            <line
-              x1={panelW / 2}
-              y1={boxY + 52}
-              x2={panelW / 2}
-              y2={bagFloor - bags.esmH - 4}
-              stroke="var(--success)"
-              strokeWidth={1}
-              strokeOpacity={0.35}
-              strokeDasharray="3 4"
-            />
-
-            <BundleBag
-              x={esmBagX}
-              y={bagFloor - bags.esmH}
-              width={bags.esmW}
-              height={bags.esmH}
-              fill="var(--success)"
-              strokeWidth={1.5}
-            />
-            <text
-              x={panelW / 2}
-              y={bagFloor - bags.esmH - 10}
-              textAnchor="middle"
-              fill="var(--success)"
-              fontSize={14}
-              fontFamily="var(--font-mono)"
-              fontWeight={500}
-            >
-              {esmSize}
-            </text>
-          </g>
-        </svg>
-      </div>
-    </figure>
-  );
-}
-
-type CycleProps = {
-  className?: string;
-};
-
-/** Compact ring: singleton lights the cycle; ESM only lights imports. */
-export function CycleRingMetaphor({ className }: CycleProps) {
-  const cx = 110;
-  const cy = 58;
-  const r = 34;
-  const n = 4;
-  const boxes = Array.from({ length: n }, (_, i) => {
-    const a = (Math.PI * 2 * i) / n - Math.PI / 2;
-    return { x: cx + Math.cos(a) * r - 14, y: cy + Math.sin(a) * r - 11 };
-  });
-
-  return (
-    <figure className={`flex flex-col gap-2 ${className ?? ""}`}>
-      <p className="lab-label">
-        Cycles · hub can light neighbors you never call
-      </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <svg
-          viewBox="0 0 220 118"
-          role="img"
-          aria-label="Four packages in a ring, all lit by a singleton hub"
-          className="h-auto w-full max-w-[14rem]"
-        >
+          {/* ── Your GraphQL app ── */}
+          <rect
+            x={appX}
+            y={appY}
+            width={appW}
+            height={appH}
+            rx={2}
+            fill="var(--surface-raised)"
+            stroke="var(--border-visible)"
+            strokeWidth={1.5}
+          />
           <text
-            x={0}
-            y={12}
+            x={schemaCx}
+            y={appY + 20}
+            textAnchor="middle"
+            fill="var(--text-primary)"
+            fontSize={12}
+            fontFamily="var(--font-mono)"
+            letterSpacing="0.06em"
+          >
+            YOUR GRAPHQL APP
+          </text>
+          <text
+            x={schemaCx}
+            y={appY + 38}
+            textAnchor="middle"
+            fill="var(--text-secondary)"
+            fontSize={11}
+            fontFamily="var(--font-sans)"
+          >
+            Schema binds · ~2–5 resolvers / pkg
+          </text>
+
+          {/* Dashed edges: same K call sites */}
+          <path
+            d={`M ${schemaCx - 20} ${schemaCy} C ${schemaCx - 80} ${schemaCy + 28}, ${leftEntryCx} ${armY - 10}, ${leftEntryCx} ${armY}`}
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth={1.25}
+            strokeDasharray="4 4"
+            strokeOpacity={0.7}
+          />
+          <path
+            d={`M ${schemaCx + 20} ${schemaCy} C ${schemaCx + 80} ${schemaCy + 28}, ${rightEntryCx} ${armY - 10}, ${rightEntryCx} ${armY}`}
+            fill="none"
+            stroke="var(--success)"
+            strokeWidth={1.25}
+            strokeDasharray="4 4"
+            strokeOpacity={0.7}
+          />
+          <text
+            x={schemaCx - 100}
+            y={schemaCy + 28}
+            fill="var(--accent)"
+            fontSize={9}
+            fontFamily="var(--font-mono)"
+            letterSpacing="0.04em"
+          >
+            calls K sites
+          </text>
+          <text
+            x={schemaCx + 48}
+            y={schemaCy + 28}
+            fill="var(--success)"
+            fontSize={9}
+            fontFamily="var(--font-mono)"
+            letterSpacing="0.04em"
+          >
+            imports K sites
+          </text>
+
+          {/* ── Singleton arm ── */}
+          <ArmFrame
+            x={leftX}
+            y={armY}
+            width={armW}
+            height={armH}
+            stroke="var(--accent)"
+            title="SINGLETON ARM — ONE BIG BAG"
+          />
+
+          {/* Registry node */}
+          <ellipse
+            cx={leftEntryCx}
+            cy={entryY + 14}
+            rx={72}
+            ry={18}
+            fill="var(--accent)"
+            fillOpacity={0.12}
+            stroke="var(--accent)"
+            strokeWidth={1.5}
+          />
+          <text
+            x={leftEntryCx}
+            y={entryY + 11}
+            textAnchor="middle"
             fill="var(--accent)"
             fontSize={10}
             fontFamily="var(--font-mono)"
-            letterSpacing="0.08em"
+            letterSpacing="0.06em"
           >
-            SINGLETON
+            REGISTRY
           </text>
-          {boxes.map((b, i) => {
-            const next = boxes[(i + 1) % n]!;
-            return (
-              <line
-                key={`l-${i}`}
-                x1={b.x + 14}
-                y1={b.y + 11}
-                x2={next.x + 14}
-                y2={next.y + 11}
-                stroke="var(--accent)"
-                strokeWidth={1.25}
-                strokeOpacity={0.45}
-              />
-            );
-          })}
-          {boxes.map((b, i) => (
-            <g key={i}>
-              <rect
-                x={b.x}
-                y={b.y}
-                width={28}
-                height={22}
-                rx={1}
-                fill="var(--surface)"
-                stroke="var(--accent)"
-                strokeWidth={1.25}
-              />
-              <circle cx={b.x + 8} cy={b.y + 11} r={2.2} fill="var(--accent)" />
-              <circle
-                cx={b.x + 14}
-                cy={b.y + 11}
-                r={2.2}
-                fill="var(--accent)"
-              />
-              <circle
-                cx={b.x + 20}
-                cy={b.y + 11}
-                r={2.2}
-                fill="var(--accent)"
-              />
-            </g>
-          ))}
-        </svg>
-        <svg
-          viewBox="0 0 220 118"
-          role="img"
-          aria-label="Four packages in a ring; only imported packages stay lit"
-          className="h-auto w-full max-w-[14rem]"
-        >
           <text
-            x={0}
-            y={12}
+            x={leftEntryCx}
+            y={entryY + 23}
+            textAnchor="middle"
+            fill="var(--accent)"
+            fontSize={8}
+            fontFamily="var(--font-sans)"
+            opacity={0.85}
+          >
+            side-effect import
+          </text>
+
+          {leftPkgsX.map((x, i) => (
+            <line
+              key={`s-spoke-${i}`}
+              x1={leftEntryCx}
+              y1={entryY + 32}
+              x2={x + 32}
+              y2={pkgY}
+              stroke="var(--accent)"
+              strokeWidth={1.15}
+              strokeOpacity={0.45}
+            />
+          ))}
+
+          {PKG_SINGLETON.map((dots, i) => (
+            <PackageBox
+              key={`s-${i}`}
+              dots={dots}
+              x={leftPkgsX[i]!}
+              y={pkgY}
+              stroke="var(--accent)"
+              liveFill="var(--accent)"
+              label={i === 2 ? "pkg N" : `pkg ${i + 1}`}
+            />
+          ))}
+
+          {leftPkgsX.map((x, i) => (
+            <line
+              key={`s-funnel-${i}`}
+              x1={x + 32}
+              y1={pkgY + 36}
+              x2={leftBagX + bags.singletonW / 2}
+              y2={leftBagY}
+              stroke="var(--accent)"
+              strokeWidth={1}
+              strokeOpacity={0.35}
+            />
+          ))}
+
+          <BundleBag
+            x={leftBagX}
+            y={leftBagY}
+            width={bags.singletonW}
+            height={bags.singletonH}
+            fill="var(--accent)"
+            strokeWidth={2.25}
+          />
+          <text
+            x={leftX + armW / 2}
+            y={leftBagY + bags.singletonH / 2 - 4}
+            textAnchor="middle"
+            fill="var(--accent)"
+            fontSize={13}
+            fontFamily="var(--font-mono)"
+            fontWeight={500}
+          >
+            {singletonSize}
+          </text>
+          <text
+            x={leftX + armW / 2}
+            y={leftBagY + bags.singletonH / 2 + 12}
+            textAnchor="middle"
+            fill="var(--accent)"
+            fontSize={8}
+            fontFamily="var(--font-mono)"
+            letterSpacing="0.04em"
+            opacity={0.8}
+          >
+            ALL DOTS
+          </text>
+
+          {/* ── ESM arm ── */}
+          <ArmFrame
+            x={rightX}
+            y={armY}
+            width={armW}
+            height={armH}
+            stroke="var(--success)"
+            title="ESM ARM — THIN BAG"
+          />
+
+          {/* Import call-sites node */}
+          <rect
+            x={rightEntryCx - 78}
+            y={entryY}
+            width={156}
+            height={28}
+            rx={1}
+            fill="var(--success)"
+            fillOpacity={0.1}
+            stroke="var(--success)"
+            strokeWidth={1.5}
+          />
+          <text
+            x={rightEntryCx}
+            y={entryY + 12}
+            textAnchor="middle"
             fill="var(--success)"
             fontSize={10}
             fontFamily="var(--font-mono)"
-            letterSpacing="0.08em"
+            letterSpacing="0.04em"
           >
-            ESM
+            import used()
           </text>
-          {boxes.map((b, i) => {
-            const next = boxes[(i + 1) % n]!;
-            return (
-              <line
-                key={`l-${i}`}
-                x1={b.x + 14}
-                y1={b.y + 11}
-                x2={next.x + 14}
-                y2={next.y + 11}
-                stroke="var(--border-visible)"
-                strokeWidth={1}
-                strokeDasharray="3 3"
-              />
-            );
-          })}
-          {boxes.map((b, i) => {
-            const lit = i === 0 || i === 1;
-            const stroke = lit ? "var(--success)" : "var(--text-disabled)";
-            return (
-              <g key={i} opacity={lit ? 1 : 0.4}>
-                <rect
-                  x={b.x}
-                  y={b.y}
-                  width={28}
-                  height={22}
-                  rx={1}
-                  fill="var(--surface)"
-                  stroke={stroke}
-                  strokeWidth={1.25}
-                />
-                <circle
-                  cx={b.x + 8}
-                  cy={b.y + 11}
-                  r={2.2}
-                  fill={lit ? "var(--success)" : "transparent"}
-                  stroke={lit ? undefined : "var(--text-disabled)"}
-                  strokeWidth={lit ? 0 : 1}
-                />
-                <circle
-                  cx={b.x + 14}
-                  cy={b.y + 11}
-                  r={2.2}
-                  fill={lit ? "var(--success)" : "transparent"}
-                  stroke={lit ? undefined : "var(--text-disabled)"}
-                  strokeWidth={lit ? 0 : 1}
-                />
-                <circle
-                  cx={b.x + 20}
-                  cy={b.y + 11}
-                  r={2.2}
-                  fill="transparent"
-                  stroke="var(--text-disabled)"
-                  strokeWidth={1}
-                />
-              </g>
-            );
-          })}
+          <text
+            x={rightEntryCx}
+            y={entryY + 23}
+            textAnchor="middle"
+            fill="var(--success)"
+            fontSize={8}
+            fontFamily="var(--font-sans)"
+            opacity={0.85}
+          >
+            …K call sites
+          </text>
+
+          {rightPkgsX.map((x, i) => (
+            <line
+              key={`e-spoke-${i}`}
+              x1={rightEntryCx}
+              y1={entryY + 28}
+              x2={x + 32}
+              y2={pkgY}
+              stroke="var(--success)"
+              strokeWidth={1.15}
+              strokeOpacity={0.45}
+            />
+          ))}
+
+          {PKG_ESM.map((dots, i) => (
+            <PackageBox
+              key={`e-${i}`}
+              dots={dots}
+              x={rightPkgsX[i]!}
+              y={pkgY}
+              stroke="var(--success)"
+              liveFill="var(--success)"
+              label={i === 2 ? "pkg …" : `pkg ${i + 1}`}
+            />
+          ))}
+
+          {rightPkgsX.map((x, i) => (
+            <line
+              key={`e-funnel-${i}`}
+              x1={x + 32}
+              y1={pkgY + 36}
+              x2={rightBagX + bags.esmW / 2}
+              y2={rightBagY}
+              stroke="var(--success)"
+              strokeWidth={1}
+              strokeOpacity={0.35}
+            />
+          ))}
+
+          <BundleBag
+            x={rightBagX}
+            y={rightBagY}
+            width={bags.esmW}
+            height={bags.esmH}
+            fill="var(--success)"
+            strokeWidth={1.5}
+          />
+          <text
+            x={rightX + armW / 2}
+            y={rightBagY - 8}
+            textAnchor="middle"
+            fill="var(--success)"
+            fontSize={13}
+            fontFamily="var(--font-mono)"
+            fontWeight={500}
+          >
+            {esmSize}
+          </text>
+          <text
+            x={rightX + armW / 2}
+            y={rightBagY + bags.esmH / 2 + 4}
+            textAnchor="middle"
+            fill="var(--success)"
+            fontSize={8}
+            fontFamily="var(--font-mono)"
+            letterSpacing="0.04em"
+            opacity={0.85}
+          >
+            FILLED ONLY
+          </text>
         </svg>
       </div>
+
+      <p className="lab-mono text-[length:var(--caption)] text-[color:var(--text-secondary)]">
+        Cycles: a hub can light neighbors you never call — ESM only lights
+        imports.{" "}
+        <a
+          href="/docs/why"
+          className="text-[color:var(--text-primary)] underline-offset-2 hover:underline"
+        >
+          Why →
+        </a>
+      </p>
     </figure>
   );
 }
