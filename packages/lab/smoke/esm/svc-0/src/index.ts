@@ -11,8 +11,3 @@ export function unused(): typeof UNUSED_PAYLOAD {
   void UNUSED_PAYLOAD;
   return UNUSED_PAYLOAD;
 }
-
-export const Svc0 = {
-  used,
-  unused,
-};

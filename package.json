@@ -27,6 +27,7 @@
     "lab:bench:thirdparty": "bun run scripts/lab/run-scale-bench.ts --case=thirdparty",
     "lab:bench:thirdparty:real": "bun run scripts/lab/run-scale-bench.ts --case=thirdparty --3p=real",
     "lab:bench:fleet": "bun run scripts/lab/run-scale-bench.ts --case=fleet",
+    "lab:bench:realistic": "bun run scripts/lab/run-scale-bench.ts --case=realistic",
     "lab:bench:coldstart": "bun run scripts/lab/run-coldstart-bench.ts",
     "lab:probe:scale": "bun run scripts/lab/probe-scale-practicality.ts",
     "orchestrate": "bun run .sandcastle/orchestrate.ts"

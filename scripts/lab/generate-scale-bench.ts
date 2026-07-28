@@ -8,11 +8,14 @@
  *   bun run scripts/lab/generate-scale-bench.ts --n=3 --smoke
  *   bun run scripts/lab/generate-scale-bench.ts --n=100 --case=thirdparty
  *   bun run scripts/lab/generate-scale-bench.ts --n=3 --case=thirdparty --3p-count=2 --3p-bytes=2048
+ *   bun run scripts/lab/generate-scale-bench.ts --n=100 --case=realistic
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  assertCyclesWithThirdParty,
   parseThirdPartyConfig,
+  REALISTIC_DEFAULTS,
   type ThirdPartyConfig,
 } from "./bench-metrics.ts";
 import { writeThirdPartyPackages } from "./third-party-stubs.ts";
@@ -25,27 +28,36 @@ function argValue(flag: string): string | undefined {
 }
 
 const smoke = process.argv.includes("--smoke");
-const cycles = process.argv.includes("--cycles");
+const caseFlag = argValue("--case");
 const want3p =
   process.argv.includes("--3p") ||
   argValue("--3p") != null ||
-  argValue("--case") === "thirdparty";
+  caseFlag === "thirdparty" ||
+  caseFlag === "realistic";
 const n = Number(argValue("--n") ?? (smoke ? "3" : "100"));
-const fns = Number(argValue("--fns") ?? "2");
+const fns = Number(
+  argValue("--fns") ?? (caseFlag === "realistic" ? String(REALISTIC_DEFAULTS.fns) : "2"),
+);
+const cycles =
+  process.argv.includes("--cycles") ||
+  caseFlag === "realistic" ||
+  caseFlag === "cycles";
 const caseName =
-  argValue("--case") ??
+  caseFlag ??
   (want3p ? "thirdparty" : cycles ? "cycles" : fns > 2 ? "wide" : "baseline");
 
 let thirdParty: ThirdPartyConfig | null = null;
 if (want3p) {
   try {
     const modeFlag = argValue("--3p");
+    const defaultMode =
+      caseName === "realistic" ? REALISTIC_DEFAULTS.thirdPartyMode : undefined;
     thirdParty = parseThirdPartyConfig({
       smoke,
       mode:
         modeFlag === "real" || modeFlag === "stub"
           ? modeFlag
-          : undefined,
+          : defaultMode,
       count:
         argValue("--3p-count") != null
           ? Number(argValue("--3p-count"))
@@ -59,6 +71,13 @@ if (want3p) {
     console.error(err instanceof Error ? err.message : err);
     process.exit(2);
   }
+}
+
+try {
+  assertCyclesWithThirdParty(caseName, cycles, thirdParty?.mode ?? null);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(2);
 }
 
 if (!Number.isFinite(n) || n < 1 || n > 10000) {
@@ -193,13 +212,6 @@ export function ${name}(): typeof ${payload} {
 `;
   }).join("\n");
 
-  const nsMembers = [
-    "used",
-    ...Array.from({ length: totalFns - 1 }, (_, idx) =>
-      unusedMethodName(idx + 1, totalFns),
-    ),
-  ].join(",\n  ");
-
   // Ring edge: bare import + real top-level side effect on every module.
   // Named `void cycleId` / side-effect-free deps are DCE'd by esbuild.
   const cycleImport = withCycles ? `import "${nextName}";\n` : "";
@@ -210,14 +222,12 @@ export function ${name}(): typeof ${payload} {
     : "";
   const cycleExport = withCycles ? `\nexport const cycleId = ${i};\n` : "";
 
+  // Named exports only — consumers use `import * as SvcN` (dotted call sites).
+  // No namespace-shaped `export const SvcN = { … }` bag.
   return `${core3pImport}${cycleImport}${cycleTouch}${unusedBlocks}
 export function used(): string {
   return "${usedM}";
 }
-
-export const Svc${i} = {
-  ${nsMembers},
-};
 ${cycleExport}`;
 }
 

@@ -10,7 +10,8 @@ export type BenchCase =
   | "partial"
   | "thirdparty"
   | "fleet"
-  | "coldstart";
+  | "coldstart"
+  | "realistic";
 
 export const BENCH_CASES: readonly BenchCase[] = [
   "baseline",
@@ -20,7 +21,17 @@ export const BENCH_CASES: readonly BenchCase[] = [
   "thirdparty",
   "fleet",
   "coldstart",
+  "realistic",
 ] as const;
+
+/** GraphQL-shaped preset: cycles + real 3p + multi call sites (~10/pkg). */
+export const REALISTIC_DEFAULTS = {
+  n: 100,
+  fns: 20,
+  used: 1000,
+  cycles: true,
+  thirdPartyMode: "real" as const,
+} as const;
 
 export type ThirdPartyMode = "stub" | "real";
 
@@ -52,7 +63,30 @@ export function reportArtifactBase(
       return "benchmark-fleet-latest";
     case "coldstart":
       return "benchmark-coldstart-latest";
+    case "realistic":
+      return "benchmark-realistic-latest";
   }
+}
+
+/**
+ * Cycles + third-party ballast may only combine under `--case=realistic`
+ * with `--3p=real`. UC3 / thirdparty / others keep those knobs exclusive.
+ */
+export function assertCyclesWithThirdParty(
+  benchCase: string,
+  cycles: boolean,
+  thirdPartyMode: ThirdPartyMode | null | undefined,
+): void {
+  if (!cycles || thirdPartyMode == null) return;
+  if (benchCase === "realistic" && thirdPartyMode === "real") return;
+  if (benchCase === "realistic") {
+    throw new Error(
+      "Cycles combined with --3p requires --3p=real for --case=realistic",
+    );
+  }
+  throw new Error(
+    "Cycles combined with --3p is only allowed for --case=realistic with --3p=real",
+  );
 }
 
 export type FleetPerConsumer = {
@@ -274,4 +308,191 @@ export function coldStartBenefit(
 
 export function isBenchCase(value: string): value is BenchCase {
   return (BENCH_CASES as readonly string[]).includes(value);
+}
+
+/** Per-arm pipeline timings under one cache mode (warm or cold). */
+export type PipelineArmTimings = {
+  generateMs: number;
+  installMs: number;
+  bundleMs: number;
+  artifactBytes: number;
+  /** Null when not uploaded (local) or upload not measured. */
+  artifactUploadMs: number | null;
+  pipelineTotalMs: number;
+};
+
+export type PipelineCacheMode = "warm" | "cold";
+
+export type PipelineModeArms = {
+  singleton: PipelineArmTimings;
+  esm: PipelineArmTimings;
+};
+
+/** Realistic pipeline: fair pairs per cache mode; never average warm+cold. */
+export type PipelineReport = {
+  warm: PipelineModeArms | null;
+  cold: PipelineModeArms | null;
+};
+
+export type ProofRunner = "github-actions" | "local";
+
+export type RealisticProof = {
+  timestamp: string;
+  githubRunUrl: string | null;
+  githubRunId: string | null;
+  runner: ProofRunner;
+};
+
+export type RequestLatency = {
+  p50: number;
+  p95: number;
+};
+
+export type RequestArmMetrics = {
+  warmup: number;
+  measured: number;
+  concurrency: number;
+  latencyMs: RequestLatency;
+  cpuUserMs: number;
+  cpuSystemMs: number;
+  rssBytes: number;
+  heapUsedBytes: number;
+};
+
+/** Filled once per arm (not × warm/cold). Null until request harness runs. */
+export type RequestReport = {
+  singleton: RequestArmMetrics;
+  esm: RequestArmMetrics;
+  disclaimer: string;
+} | null;
+
+export const REQUEST_DISCLAIMER =
+  "Node HTTP on GitHub Actions / local is not a Cloudflare isolate boot and is not production gateway RPS. Relative arm comparison only.";
+
+export const REQUEST_BENCH_DEFAULTS = {
+  warmup: 50,
+  measured: 1000,
+  concurrency: 1,
+} as const;
+
+export const REALISTIC_PIPELINE_METHODOLOGY =
+  "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.";
+
+export function pipelineTotalMs(parts: {
+  generateMs: number;
+  installMs: number;
+  bundleMs: number;
+  artifactUploadMs: number | null;
+}): number {
+  return (
+    parts.generateMs +
+    parts.installMs +
+    parts.bundleMs +
+    (parts.artifactUploadMs ?? 0)
+  );
+}
+
+export function buildPipelineArmTimings(parts: {
+  generateMs: number;
+  installMs: number;
+  bundleMs: number;
+  artifactBytes: number;
+  artifactUploadMs: number | null;
+}): PipelineArmTimings {
+  return {
+    generateMs: parts.generateMs,
+    installMs: parts.installMs,
+    bundleMs: parts.bundleMs,
+    artifactBytes: parts.artifactBytes,
+    artifactUploadMs: parts.artifactUploadMs,
+    pipelineTotalMs: pipelineTotalMs(parts),
+  };
+}
+
+export function mergePipelineReport(
+  existing: PipelineReport | null | undefined,
+  mode: PipelineCacheMode,
+  arms: PipelineModeArms,
+): PipelineReport {
+  const base: PipelineReport = {
+    warm: existing?.warm ?? null,
+    cold: existing?.cold ?? null,
+  };
+  return mode === "warm"
+    ? { ...base, warm: arms }
+    : { ...base, cold: arms };
+}
+
+export function buildProofFromEnv(
+  env: Record<string, string | undefined>,
+  timestamp: string = new Date().toISOString(),
+): RealisticProof {
+  const runId = env.GITHUB_RUN_ID ?? null;
+  const isActions =
+    env.GITHUB_ACTIONS === "true" || env.GITHUB_ACTIONS === "1";
+  if (!isActions || runId == null || runId === "") {
+    return {
+      timestamp,
+      githubRunUrl: null,
+      githubRunId: null,
+      runner: "local",
+    };
+  }
+  const server = env.GITHUB_SERVER_URL ?? "https://github.com";
+  const repo = env.GITHUB_REPOSITORY ?? "";
+  const githubRunUrl =
+    repo !== ""
+      ? `${server.replace(/\/$/, "")}/${repo}/actions/runs/${runId}`
+      : null;
+  return {
+    timestamp,
+    githubRunUrl,
+    githubRunId: runId,
+    runner: "github-actions",
+  };
+}
+
+/**
+ * Percentile of a pre-sorted ascending numeric sample (linear interpolation).
+ * Empty → 0; single sample → that value.
+ */
+export function percentile(
+  sortedAscending: readonly number[],
+  p: number,
+): number {
+  if (sortedAscending.length === 0) return 0;
+  if (sortedAscending.length === 1) return sortedAscending[0]!;
+  const rank = (p / 100) * (sortedAscending.length - 1);
+  const lo = Math.floor(rank);
+  const hi = Math.ceil(rank);
+  const w = rank - lo;
+  return Number(
+    ((1 - w) * sortedAscending[lo]! + w * sortedAscending[hi]!).toFixed(2),
+  );
+}
+
+export function buildRequestArmMetrics(input: {
+  latenciesMs: readonly number[];
+  warmup: number;
+  measured: number;
+  concurrency: number;
+  cpuUserMs: number;
+  cpuSystemMs: number;
+  rssBytes: number;
+  heapUsedBytes: number;
+}): RequestArmMetrics {
+  const sorted = [...input.latenciesMs].sort((a, b) => a - b);
+  return {
+    warmup: input.warmup,
+    measured: input.measured,
+    concurrency: input.concurrency,
+    latencyMs: {
+      p50: percentile(sorted, 50),
+      p95: percentile(sorted, 95),
+    },
+    cpuUserMs: input.cpuUserMs,
+    cpuSystemMs: input.cpuSystemMs,
+    rssBytes: input.rssBytes,
+    heapUsedBytes: input.heapUsedBytes,
+  };
 }
