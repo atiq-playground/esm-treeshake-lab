@@ -1,7 +1,7 @@
 # ESM tree-shake lab
 
 [![CI](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/atiq-playground/esm-treeshake-lab/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/atiq-playground/esm-treeshake-lab?label=release)](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.4.0)
+[![Release](https://img.shields.io/github/v/release/atiq-playground/esm-treeshake-lab?label=release)](https://github.com/atiq-playground/esm-treeshake-lab/releases/tag/v0.5.0)
 [![Bun](https://img.shields.io/badge/bun-1.3.14-fbf0df?logo=bun&logoColor=f472b6)](package.json)
 [![License](https://img.shields.io/github/license/atiq-playground/esm-treeshake-lab)](LICENSE)
 
@@ -10,6 +10,39 @@ A Nx + Bun lab that **measures** singleton-plugin packaging vs ESM selective imp
 
 **Focus**  
 Metrics only: bytes, unused markers, build time. No auth / identity demo.
+
+## The idea in one picture
+
+Same GraphQL app, same ~2–5 resolvers per package — registry packaging ships **every** export; selective ESM keeps only what you call.
+
+```mermaid
+flowchart LR
+  subgraph APP["Your GraphQL app"]
+    S["Schema binds<br/>~2–5 resolvers / package"]
+  end
+
+  subgraph SINGLETON["Singleton arm — ONE big bag"]
+    R[("Registry<br/>side-effect import")]
+    R --> P1["pkg 1<br/>●●●●●●●●●●"]
+    R --> P2["pkg 2<br/>●●●●●●●●●●"]
+    R --> PN["pkg N<br/>●●●●●●●●●●"]
+    P1 --> BAG1["BAG = ALL dots<br/>huge"]
+    P2 --> BAG1
+    PN --> BAG1
+  end
+
+  subgraph ESM["ESM arm — thin bag"]
+    I1["import used()"] --> E1["pkg 1<br/>● ○ ○ ○ ○"]
+    I2["import used()"] --> E2["pkg 2<br/>● ○ ○ ○ ○"]
+    IK["…K call sites"] --> EN["pkg …<br/>● ○ ○ ○ ○"]
+    E1 --> BAG2["BAG = filled dots only<br/>tiny"]
+    E2 --> BAG2
+    EN --> BAG2
+  end
+
+  S -.->|"calls K sites"| SINGLETON
+  S -.->|"imports K sites"| ESM
+```
 
 **If this helped you, drop a [follow](https://github.com/noonii) and a [star on GitHub](https://github.com/atiq-playground/esm-treeshake-lab)! I would really appreciate it.**
 
