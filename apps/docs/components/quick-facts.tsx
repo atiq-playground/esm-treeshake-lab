@@ -87,11 +87,13 @@ function FactRow({
           </span>
         </div>
         <FactHeadline fact={fact} />
-        <ul className="lab-fact-tags" aria-label="Typical pipeline surfaces">
-          {fact.pipelineTags.map((tag) => (
-            <li key={tag}>{tag}</li>
-          ))}
-        </ul>
+        {!compact ? (
+          <ul className="lab-fact-tags" aria-label="Typical pipeline surfaces">
+            {fact.pipelineTags.map((tag) => (
+              <li key={tag}>{tag}</li>
+            ))}
+          </ul>
+        ) : null}
         <p className="lab-fact-detail">{fact.detail}</p>
         <p className="lab-fact-expand">{fact.expand}</p>
       </div>
