@@ -5,11 +5,11 @@
   "sourceRoot": "apps/docs",
   "targets": {
     "dev": {
-      "command": "next dev --port 3000",
+      "command": "bun run highlight:packaging && next dev --port 3000",
       "options": { "cwd": "apps/docs" }
     },
     "build": {
-      "command": "next build",
+      "command": "bun run highlight:packaging && next build",
       "options": { "cwd": "apps/docs" }
     },
     "start": {
@@ -17,11 +17,11 @@
       "options": { "cwd": "apps/docs" }
     },
     "preview": {
-      "command": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+      "command": "bun run highlight:packaging && opennextjs-cloudflare build && opennextjs-cloudflare preview",
       "options": { "cwd": "apps/docs" }
     },
     "deploy": {
-      "command": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+      "command": "bun run highlight:packaging && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
       "options": { "cwd": "apps/docs" }
     }
   }
