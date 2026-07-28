@@ -136,6 +136,14 @@ function ChartTooltip({
   );
 }
 
+/** Gutter above bar top — never draw size/factor inside the fill. */
+const LABEL_GAP = {
+  singletonKb: 8,
+  /** Upper line (KB) and lower line (factor), both above the bar. */
+  esmKb: 20,
+  esmFactor: 7,
+} as const;
+
 function SingletonLabel(props: {
   x?: number | string;
   y?: number | string;
@@ -150,12 +158,12 @@ function SingletonLabel(props: {
   return (
     <text
       x={cx}
-      y={cy}
-      dy={-6}
+      y={cy - LABEL_GAP.singletonKb}
       textAnchor="middle"
-      fill="var(--text-secondary)"
-      fontSize={10}
+      fill="var(--text-primary)"
+      fontSize={11}
       fontFamily="var(--font-mono)"
+      fontWeight={500}
     >
       {formatBarKb(payload.singletonBytes)}
     </text>
@@ -175,18 +183,15 @@ function EsmLabel(props: {
   const cy = Number(y);
   return (
     <text
-      x={cx}
-      y={cy}
-      dy={-6}
       textAnchor="middle"
-      fill="var(--success)"
-      fontSize={10}
+      fontSize={11}
       fontFamily="var(--font-mono)"
+      fontWeight={500}
     >
-      <tspan x={cx} dy={0}>
+      <tspan x={cx} y={cy - LABEL_GAP.esmKb} fill="var(--success)">
         {formatBarKb(payload.esmBytes)}
       </tspan>
-      <tspan x={cx} dy={12} fill="var(--text-secondary)">
+      <tspan x={cx} y={cy - LABEL_GAP.esmFactor} fill="var(--text-primary)">
         {payload.factorLabel}
       </tspan>
     </text>
@@ -206,7 +211,7 @@ export function UseCaseComparisonChart({ rows }: Props) {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 36, right: 8, left: 4, bottom: 12 }}
+          margin={{ top: 52, right: 8, left: 4, bottom: 12 }}
           barCategoryGap="28%"
           barGap={4}
         >
