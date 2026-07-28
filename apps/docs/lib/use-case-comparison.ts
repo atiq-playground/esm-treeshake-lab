@@ -190,6 +190,11 @@ export function toUseCaseComparison(
     const bytesSaved =
       report.benefit.bytesSaved ??
       Math.max(0, singletonBytes - esmBytes);
+    const bytesSavedPct =
+      report.benefit.bytesSavedPct ??
+      (singletonBytes === 0
+        ? 0
+        : Number(((bytesSaved / singletonBytes) * 100).toFixed(1)));
     const singletonSize =
       report.arms.singleton.size ?? byteParts(singletonBytes);
     const esmSize = report.arms.esm.size ?? byteParts(esmBytes);
@@ -215,7 +220,7 @@ export function toUseCaseComparison(
       esmKb: Math.max(esmBytes / 1024, 0.001),
       singletonPrimary: singletonSize.primary,
       esmPrimary: esmSize.primary,
-      bytesSavedPct: report.benefit.bytesSavedPct,
+      bytesSavedPct,
       bytesSaved,
       sizeSavedPrimary: savedSize.primary,
       singletonVsEsmFactor: report.benefit.singletonVsEsmFactor,
