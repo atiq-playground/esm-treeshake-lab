@@ -235,7 +235,7 @@ export function UseCaseComparisonChart({ rows }: Props) {
         <BarChart
           layout="vertical"
           data={data}
-          margin={{ top: 12, right: 96, left: 8, bottom: 12 }}
+          margin={{ top: 12, right: 96, left: 12, bottom: 12 }}
           barCategoryGap="22%"
           barGap={6}
         >
@@ -261,7 +261,7 @@ export function UseCaseComparisonChart({ rows }: Props) {
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            width={88}
+            width={110}
             tickMargin={8}
             tick={<CaseTick />}
           />
