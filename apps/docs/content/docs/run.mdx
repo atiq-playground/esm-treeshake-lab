@@ -81,6 +81,17 @@ bun run lab:bench:coldstart
 bun run lab:bench:coldstart -- --n=3
 ```
 
+## Realistic GraphQL pipeline (+ request)
+
+On-demand proof case: cycles + real npm 3p, `--used=1000` (~10 call sites/pkg). Sibling report only — **does not** change the homepage UC1 chart. Details and Last verified live on [Research](/docs/research).
+
+```bash
+bun run lab:bench:realistic
+bun run lab:bench:request   # fresh Node process per arm; fills request.* in the realistic report
+```
+
+GHA: Actions → **Lab realistic bench** (`workflow_dispatch`) → PR with `docs/lab/benchmark-realistic-latest.*`.
+
 ## Outputs
 
 | Path | Use |
@@ -95,6 +106,7 @@ bun run lab:bench:coldstart -- --n=3
 | `docs/lab/benchmark-thirdparty-real-latest.*` | Real pinned npm 3p |
 | `docs/lab/benchmark-fleet-latest.*` | Fleet naive ×M + shared multi-entry |
 | `docs/lab/benchmark-coldstart-latest.*` | Node cold import + RSS (research N=50) |
+| `docs/lab/benchmark-realistic-latest.*` | Realistic pipeline + request (GHA proof) |
 
 ## Support
 
