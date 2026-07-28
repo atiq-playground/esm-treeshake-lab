@@ -585,7 +585,8 @@ export function PackagingMetaphor({
             x={sEntryCx}
             y={sEntryCy + 15}
             textAnchor="middle"
-            fill="var(--text-secondary)"
+            fill="#ffffff"
+            fillOpacity={0.82}
             fontSize={10}
             fontFamily="var(--font-sans)"
           >
@@ -665,7 +666,8 @@ export function PackagingMetaphor({
             x={sBagCx}
             y={sBagCy + 28}
             textAnchor="middle"
-            fill="var(--text-secondary)"
+            fill="#ffffff"
+            fillOpacity={0.75}
             fontSize={9}
             fontFamily="var(--font-mono)"
           >
@@ -699,7 +701,8 @@ export function PackagingMetaphor({
                 x={eImportXs + importW / 2}
                 y={py + 25}
                 textAnchor="middle"
-                fill="var(--text-primary)"
+                fill="#ffffff"
+                fillOpacity={0.92}
                 fontSize={10}
                 fontFamily="var(--font-mono)"
                 letterSpacing="0.03em"
@@ -775,7 +778,8 @@ export function PackagingMetaphor({
             x={eBagCx}
             y={eBagCy + 28}
             textAnchor="middle"
-            fill="var(--text-secondary)"
+            fill="#ffffff"
+            fillOpacity={0.75}
             fontSize={9}
             fontFamily="var(--font-mono)"
           >
