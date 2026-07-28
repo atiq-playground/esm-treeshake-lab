@@ -1,3 +1,3 @@
-import { used } from "@lab/esm-svc-0";
+import * as Svc0 from "@lab/esm-svc-0";
 
-export const result = used();
+export const result = Svc0.used();

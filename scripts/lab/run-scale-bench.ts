@@ -10,6 +10,8 @@
  *   bun run scripts/lab/run-scale-bench.ts --case=thirdparty --n=100 --3p=real
  *   bun run scripts/lab/run-scale-bench.ts --case=fleet --n=50 --consumers=100
  *   bun run scripts/lab/run-scale-bench.ts --case=fleet --n=3 --consumers=10 --fleet-mode=both
+ *   bun run scripts/lab/run-scale-bench.ts --case=realistic
+ *   bun run scripts/lab/run-scale-bench.ts --case=realistic --n=3 --used=30
  */
 import {
   mkdirSync,
@@ -23,15 +25,23 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import * as esbuild from "esbuild";
 import {
+  assertCyclesWithThirdParty,
+  buildPipelineArmTimings,
+  buildProofFromEnv,
   isBenchCase,
+  mergePipelineReport,
   parseFleetMode,
   parseThirdPartyConfig,
+  REALISTIC_DEFAULTS,
+  REALISTIC_PIPELINE_METHODOLOGY,
   reportArtifactBase,
   scaleFleetMetrics,
   sharingSavingsPct,
   sumOutputBytes,
   type BenchCase,
   type FleetMode,
+  type PipelineCacheMode,
+  type PipelineReport,
   type ThirdPartyConfig,
 } from "./bench-metrics.ts";
 import { byteParts, formatBytesDetail } from "./format-bytes.ts";
@@ -56,20 +66,54 @@ const smoke = process.argv.includes("--smoke");
 const caseRaw = argValue("--case") ?? "baseline";
 if (!isBenchCase(caseRaw)) {
   console.error(
-    "Invalid --case (baseline|wide|cycles|partial|thirdparty|fleet)",
+    "Invalid --case (baseline|wide|cycles|partial|thirdparty|fleet|realistic)",
   );
   process.exit(2);
 }
-if (smoke && (caseRaw === "thirdparty" || caseRaw === "fleet" || caseRaw === "coldstart")) {
+
+const pipelineCacheRaw = argValue("--pipeline-cache") ?? "cold";
+if (pipelineCacheRaw !== "cold" && pipelineCacheRaw !== "warm") {
+  console.error("Invalid --pipeline-cache (cold|warm)");
+  process.exit(2);
+}
+const pipelineCache: PipelineCacheMode = pipelineCacheRaw;
+const artifactUploadMsRaw = argValue("--artifact-upload-ms");
+const artifactUploadMs =
+  artifactUploadMsRaw != null && artifactUploadMsRaw !== ""
+    ? Number(artifactUploadMsRaw)
+    : null;
+if (
+  artifactUploadMs != null &&
+  (!Number.isFinite(artifactUploadMs) || artifactUploadMs < 0)
+) {
+  console.error("Invalid --artifact-upload-ms (>=0)");
+  process.exit(2);
+}
+if (
+  smoke &&
+  (caseRaw === "thirdparty" ||
+    caseRaw === "fleet" ||
+    caseRaw === "coldstart" ||
+    caseRaw === "realistic")
+) {
   console.error(
-    "UC1 --smoke cannot run thirdparty/fleet/coldstart. Use --case=… --n=3 (generated), or lab:bench:coldstart.",
+    "UC1 --smoke cannot run thirdparty/fleet/coldstart/realistic. Use --case=… --n=3 (generated), or lab:bench:coldstart.",
   );
   process.exit(2);
 }
 const benchCase: BenchCase = smoke ? "baseline" : caseRaw;
 
 const nFlag = argValue("--n");
-const n = smoke ? 3 : Number(nFlag ?? (benchCase === "fleet" ? "50" : "100"));
+const n = smoke
+  ? 3
+  : Number(
+      nFlag ??
+        (benchCase === "fleet"
+          ? "50"
+          : benchCase === "realistic"
+            ? String(REALISTIC_DEFAULTS.n)
+            : "100"),
+    );
 const mode = smoke ? "smoke" : "generated";
 
 const fnsFlag = argValue("--fns");
@@ -105,6 +149,29 @@ if (smoke || benchCase === "baseline" || benchCase === "fleet") {
     console.error(err instanceof Error ? err.message : err);
     process.exit(2);
   }
+} else if (benchCase === "realistic") {
+  fns = Number(fnsFlag ?? String(REALISTIC_DEFAULTS.fns));
+  cycles = true;
+  try {
+    const modeFlag = argValue("--3p");
+    thirdParty = parseThirdPartyConfig({
+      mode:
+        modeFlag === "real" || modeFlag === "stub"
+          ? modeFlag
+          : REALISTIC_DEFAULTS.thirdPartyMode,
+      count:
+        argValue("--3p-count") != null
+          ? Number(argValue("--3p-count"))
+          : undefined,
+      bytesPerPackage:
+        argValue("--3p-bytes") != null
+          ? Number(argValue("--3p-bytes"))
+          : undefined,
+    });
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(2);
+  }
 } else if (benchCase === "wide" || benchCase === "partial") {
   fns = Number(fnsFlag ?? "20");
   cycles = false;
@@ -116,8 +183,20 @@ if (smoke || benchCase === "baseline" || benchCase === "fleet") {
   fns = Number(fnsFlag ?? "20");
   cycles = true;
 }
-if (cyclesFlag && (benchCase === "baseline" || benchCase === "partial" || benchCase === "thirdparty" || benchCase === "fleet")) {
-  console.error("Cycles only via --case=cycles");
+if (
+  cyclesFlag &&
+  (benchCase === "baseline" ||
+    benchCase === "partial" ||
+    benchCase === "thirdparty" ||
+    benchCase === "fleet")
+) {
+  console.error("Cycles only via --case=cycles or --case=realistic");
+  process.exit(2);
+}
+try {
+  assertCyclesWithThirdParty(benchCase, cycles, thirdParty?.mode ?? null);
+} catch (err) {
+  console.error(err instanceof Error ? err.message : err);
   process.exit(2);
 }
 if (!Number.isFinite(fns) || fns < 2 || fns > 200) {
@@ -163,6 +242,8 @@ if (usedFlag != null) {
   callSites = Number(usedFlag);
 } else if (benchCase === "partial") {
   callSites = Math.max(1, Math.floor(n / 2));
+} else if (benchCase === "realistic") {
+  callSites = REALISTIC_DEFAULTS.used;
 } else {
   callSites = 1;
 }
@@ -237,6 +318,12 @@ if (seed != null && !Number.isFinite(seed)) {
   console.error("Invalid --seed");
   process.exit(2);
 }
+if (benchCase === "realistic" && seed != null) {
+  console.error(
+    "--seed is not allowed for --case=realistic (even call sites, no shuffle)",
+  );
+  process.exit(2);
+}
 
 const boundSites = pickBoundSites(n, fns, callSites, seed);
 const usedPackageIds = [...new Set(boundSites.map((s) => s.pkg))].sort(
@@ -266,24 +353,26 @@ function writeMultiCallFixtures(): { esm: string; singleton: string } {
   }
   const pkgIds = [...byPkg.keys()].sort((a, b) => a - b);
 
+  // Namespace import keeps dotted call sites (SvcN.used) while remaining
+  // member-tree-shakable — unlike `export const SvcN = { … }` object bags.
   const esmImports = pkgIds
-    .map((pkg) => {
-      const sites = byPkg.get(pkg)!;
-      const specs = sites
-        .map((s, idx) => `${s.name} as fn_${pkg}_${idx}`)
-        .join(", ");
-      return `import { ${specs} } from "${pkgPrefix.esm}-${pkg}";`;
-    })
+    .map((pkg) => `import * as Svc${pkg} from "${pkgPrefix.esm}-${pkg}";`)
     .join("\n");
   const esmCalls = pkgIds
     .flatMap((pkg) =>
-      (byPkg.get(pkg) ?? []).map((_, idx) => `fn_${pkg}_${idx}()`),
+      (byPkg.get(pkg) ?? []).map((s) => `Svc${pkg}.${s.name}()`),
     )
     .join(", ");
   const esmPath = join(FIXTURE_GEN, `esm-entry.${tag}.ts`);
   writeFileSync(
     esmPath,
-    `${esmImports}\n\nexport const result = [${esmCalls}].join("|");\n`,
+    `${esmImports}
+
+export function invoke() {
+  return [${esmCalls}].join("|");
+}
+export const result = invoke();
+`,
   );
 
   const singletonImports = [
@@ -304,12 +393,18 @@ function writeMultiCallFixtures(): { esm: string; singleton: string } {
     `${singletonImports}
 
 registerPublicServices({ baseUrl: "http://lab.invalid" });
-export const result = [${singletonCalls}].join("|");
+
+export function invoke() {
+  return [${singletonCalls}].join("|");
+}
+export const result = invoke();
 `,
   );
   return { esm: esmPath, singleton: singletonPath };
 }
 
+let generateMs = 0;
+let installMs = 0;
 if (!smoke) {
   const genCase =
     benchCase === "fleet"
@@ -330,12 +425,16 @@ if (!smoke) {
     genArgs.push(`--3p-count=${thirdParty.count}`);
     genArgs.push(`--3p-bytes=${thirdParty.bytesPerPackage}`);
   }
+  const genT0 = performance.now();
   const gen = spawnSync("bun", genArgs, { cwd: ROOT, stdio: "inherit" });
+  generateMs = Math.round(performance.now() - genT0);
   if (gen.status !== 0) process.exit(gen.status ?? 1);
+  const installT0 = performance.now();
   const install = spawnSync("bun", ["install"], {
     cwd: ROOT,
     stdio: "inherit",
   });
+  installMs = Math.round(performance.now() - installT0);
   if (install.status !== 0) process.exit(install.status ?? 1);
 }
 
@@ -545,7 +644,7 @@ async function bundleFleetShared(
     const path = join(entriesDir, `consumer-${i}.ts`);
     const src =
       arm === "esm"
-        ? `import { used } from "${pkgPrefix.esm}-0";\nexport const result_${i} = used();\n`
+        ? `import * as Svc0 from "${pkgPrefix.esm}-0";\nexport const result_${i} = Svc0.used();\n`
         : `import { registerPublicServices } from "${pkgPrefix.register}";
 import { Svc0Service } from "${pkgPrefix.singleton}-0";
 registerPublicServices({ baseUrl: "http://lab.invalid" });
@@ -639,6 +738,14 @@ const expectedTpSingleton = thirdParty
 const expectedTpEsm = thirdParty ? 1 : 0; // shared core only
 
 function caseNote(): string {
+  if (benchCase === "realistic" && thirdParty) {
+    return (
+      `Realistic GraphQL-shaped: cycles + --3p=real; app binds ${callSites} of ${surfaceFns} surface functions ` +
+      `(~${(callSites / n).toFixed(0)} call sites/pkg) across ${usedPackageIds.length} packages. ` +
+      `Both arms share the same call sites (no --seed shuffle). Singleton still registers all ${n} packages; ` +
+      `cycles may drag the full ring into ESM. Real npm core (graphql) is paid on both arms; unused SDK extras stay singleton-only.`
+    );
+  }
   if (benchCase === "thirdparty" && thirdParty) {
     if (thirdParty.mode === "real") {
       return (
@@ -675,12 +782,70 @@ function caseNote(): string {
   if (multiCall) {
     return `App binds ${callSites} of ${surfaceFns} surface functions across ${usedPackageIds.length} packages. Both arms call the same ${callSites} sites; singleton still registers all ${n} packages${cycles ? " (cycles may still drag the full ring into ESM)" : ""}.`;
   }
-  return `ESM call sites: 1 (import { used } from svc-0 only). Surface still ${surfaceFns} fns across ${n} packages; --fns only grows what can be shaken, not what ESM calls.`;
+  return `ESM call sites: 1 (import * as Svc0 from svc-0; Svc0.used() only). Surface still ${surfaceFns} fns across ${n} packages; --fns only grows what can be shaken, not what ESM calls.`;
 }
+
+const reportTimestamp = new Date().toISOString();
+const publishLatest = !smoke && n > 3;
+const jsonPath = publishLatest
+  ? join(DOCS_LAB, `${reportBase}.json`)
+  : join(OUT_DIR, `${reportBase}.json`);
+const mdPath = publishLatest
+  ? join(DOCS_LAB, `${reportBase}.md`)
+  : join(OUT_DIR, `${reportBase}.md`);
+
+type PriorRealistic = {
+  pipeline?: PipelineReport;
+  request?: unknown;
+};
+
+function readPriorRealistic(): PriorRealistic | null {
+  if (benchCase !== "realistic" || !existsSync(jsonPath)) return null;
+  try {
+    return JSON.parse(readFileSync(jsonPath, "utf8")) as PriorRealistic;
+  } catch {
+    return null;
+  }
+}
+
+const priorRealistic = readPriorRealistic();
+
+const realisticPipeline: PipelineReport | undefined =
+  benchCase === "realistic"
+    ? mergePipelineReport(
+        priorRealistic?.pipeline ?? null,
+        pipelineCache,
+        {
+          singleton: buildPipelineArmTimings({
+            generateMs,
+            installMs,
+            bundleMs: singleton.metrics.buildMs,
+            artifactBytes: singleton.metrics.bytes,
+            artifactUploadMs,
+          }),
+          esm: buildPipelineArmTimings({
+            generateMs,
+            installMs,
+            bundleMs: esm.metrics.buildMs,
+            artifactBytes: esm.metrics.bytes,
+            artifactUploadMs,
+          }),
+        },
+      )
+    : undefined;
+
+const realisticProof =
+  benchCase === "realistic"
+    ? buildProofFromEnv(process.env, reportTimestamp)
+    : undefined;
+
+/** Preserve request metrics if a prior realistic report already measured them. */
+const realisticRequest =
+  benchCase === "realistic" ? (priorRealistic?.request ?? null) : undefined;
 
 const report = {
   version: 1 as const,
-  timestamp: new Date().toISOString(),
+  timestamp: reportTimestamp,
   case: benchCase,
   n,
   fns,
@@ -745,23 +910,20 @@ const report = {
         sharingSavingsPct: sharedVsNaivePct ?? undefined,
       }
     : undefined,
+  pipeline: realisticPipeline,
+  proof: realisticProof,
+  request: realisticRequest,
   methodologyLimits:
-    benchCase === "thirdparty"
-      ? thirdParty?.mode === "real"
-        ? "Real npm path pins graphql + dataloader + graphql-tag + uuid. esbuild bundles their reachable graphs; CJS interop and peer trees still differ from production Workers installs. Stub path remains default for byte-floor CI."
-        : "3p packages are generated stubs with fixed ballast + side-effect touches. They approximate unused SDK weight. Pass --3p=real for pinned npm graphql-stack weight."
-      : benchCase === "fleet"
-        ? "Naive fleet totals multiply one measured consumer graph by M. Shared mode bundles M esbuild entries with code-splitting so common modules are counted once. Ignores CDN caches and per-app bind differences. Not a Workers isolate boot."
-        : undefined,
+    benchCase === "realistic"
+      ? REALISTIC_PIPELINE_METHODOLOGY
+      : benchCase === "thirdparty"
+        ? thirdParty?.mode === "real"
+          ? "Real npm path pins graphql + dataloader + graphql-tag + uuid. esbuild bundles their reachable graphs; CJS interop and peer trees still differ from production Workers installs. Stub path remains default for byte-floor CI."
+          : "3p packages are generated stubs with fixed ballast + side-effect touches. They approximate unused SDK weight. Pass --3p=real for pinned npm graphql-stack weight."
+        : benchCase === "fleet"
+          ? "Naive fleet totals multiply one measured consumer graph by M. Shared mode bundles M esbuild entries with code-splitting so common modules are counted once. Ignores CDN caches and per-app bind differences. Not a Workers isolate boot."
+          : undefined,
 };
-
-const publishLatest = !smoke && n > 3;
-const jsonPath = publishLatest
-  ? join(DOCS_LAB, `${reportBase}.json`)
-  : join(OUT_DIR, `${reportBase}.json`);
-const mdPath = publishLatest
-  ? join(DOCS_LAB, `${reportBase}.md`)
-  : join(OUT_DIR, `${reportBase}.md`);
 
 writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n");
 
@@ -828,13 +990,55 @@ ${sharedVsNaivePct != null ? `\nNaive→shared singleton savings: **${sharedVsNa
     : "";
 
 const whyBlock =
-  benchCase === "fleet"
-    ? `Each of ${consumers} consumers that imports the registry/SDK barrel pays the full first-party graph again under naive ×M. Selective ESM keeps per-app cost near the call sites you bind. Multi-entry shared mode shows how much a monorepo/shared-chunk build recovers for the singleton arm — ESM was already near the call-site floor.`
-    : benchCase === "thirdparty"
-      ? thirdParty?.mode === "real"
-        ? `Shared graphql (real core) is paid either way once a domain package is imported. The registry still ships unused SDK extras (dataloader / graphql-tag / uuid) plus every first-party package. Absolute bytes include real npm graphs; the packaging gap remains the unused-extra + first-party registry choice.`
-        : `Shared third-party runtime (stub core) is paid either way. The registry still ships unused 3p extras plus every first-party package. Pass --3p=real for pinned npm graphs; the first-party + unused-SDK gap remains the packaging choice.`
-      : `A singleton registry does not just import all ${n} packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~${callSites} call sites (${callSiteCoveragePct}% of the surface). Brutal when many consumers share the registry, or GraphQL sits on ${n}+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.`;
+  benchCase === "realistic"
+    ? `Realistic GraphQL-shaped packaging: both arms bind the same ${callSites} call sites across ${n} packages (cycles + real npm core). Singleton still registers the full graph; ESM pays for wired sites. Pipeline timings below compare fair pairs within one cache mode — never average warm and cold. Artifact upload is a CI proxy, not a Cloudflare deploy.`
+    : benchCase === "fleet"
+      ? `Each of ${consumers} consumers that imports the registry/SDK barrel pays the full first-party graph again under naive ×M. Selective ESM keeps per-app cost near the call sites you bind. Multi-entry shared mode shows how much a monorepo/shared-chunk build recovers for the singleton arm — ESM was already near the call-site floor.`
+      : benchCase === "thirdparty"
+        ? thirdParty?.mode === "real"
+          ? `Shared graphql (real core) is paid either way once a domain package is imported. The registry still ships unused SDK extras (dataloader / graphql-tag / uuid) plus every first-party package. Absolute bytes include real npm graphs; the packaging gap remains the unused-extra + first-party registry choice.`
+          : `Shared third-party runtime (stub core) is paid either way. The registry still ships unused 3p extras plus every first-party package. Pass --3p=real for pinned npm graphs; the first-party + unused-SDK gap remains the packaging choice.`
+        : `A singleton registry does not just import all ${n} packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~${callSites} call sites (${callSiteCoveragePct}% of the surface). Brutal when many consumers share the registry, or GraphQL sits on ${n}+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.`;
+
+function pipelineModeMd(
+  label: string,
+  arms: NonNullable<PipelineReport["cold"]> | null | undefined,
+): string {
+  if (arms == null) return "";
+  return `
+### ${label}
+
+| Arm | generate (ms) | install (ms) | bundle (ms) | artifact bytes | upload (ms) | pipeline total (ms) |
+|-----|-------------:|-------------:|-----------:|---------------:|------------:|--------------------:|
+| Singleton | ${arms.singleton.generateMs} | ${arms.singleton.installMs} | ${arms.singleton.bundleMs} | ${arms.singleton.artifactBytes.toLocaleString("en-US")} | ${arms.singleton.artifactUploadMs ?? "—"} | ${arms.singleton.pipelineTotalMs} |
+| ESM | ${arms.esm.generateMs} | ${arms.esm.installMs} | ${arms.esm.bundleMs} | ${arms.esm.artifactBytes.toLocaleString("en-US")} | ${arms.esm.artifactUploadMs ?? "—"} | ${arms.esm.pipelineTotalMs} |
+`;
+}
+
+const pipelineSection =
+  realisticPipeline != null
+    ? `
+## Pipeline (fair pairs; never average warm/cold)
+
+${report.methodologyLimits ? `> ${report.methodologyLimits}\n` : ""}
+${pipelineModeMd("Cold", realisticPipeline.cold)}
+${pipelineModeMd("Warm", realisticPipeline.warm)}
+`
+    : "";
+
+const proofSection =
+  realisticProof != null
+    ? `
+## Proof
+
+| | |
+|--|--|
+| Timestamp | ${realisticProof.timestamp} |
+| Runner | ${realisticProof.runner} |
+| GitHub run | ${realisticProof.githubRunUrl ?? "—"} |
+| Run id | ${realisticProof.githubRunId ?? "—"} |
+`
+    : "";
 
 const md = `# Scale bench ${benchCase}
 
@@ -843,7 +1047,7 @@ const md = `# Scale bench ${benchCase}
 - **N:** ${n}
 - **Fns/svc:** ${fns}
 - **Surface:** ${surfaceFns} functions (${n} × ${fns})
-- **Call sites (both arms):** ${callSites}${multiCall ? `: packages [${usedPackageIds.join(", ")}]` : ": ESM imports only \`used\` from svc-0"}
+- **Call sites (both arms):** ${callSites}${multiCall ? `: packages [${usedPackageIds.join(", ")}]` : ": ESM `import * as Svc0` then `Svc0.used()` only"}
 - **Consumers:** ${benchCase === "fleet" ? consumers : 1}${benchCase === "fleet" ? ` (fleet-mode=${fleetMode})` : ""}
 - **Cycles:** ${cycles}
 - **Host:** esbuild
@@ -869,7 +1073,7 @@ ${report.methodologyLimits ? `> **Methodology limits:** ${report.methodologyLimi
 | Singleton / ESM size | ${singletonVsEsmFactor}× |
 | Call-site coverage of surface | ${callSiteCoveragePct}% (${callSites}/${surfaceFns}) |
 | Unused markers removed | ${unusedRemovedPct}% (Δ ${unusedMarkersDelta}) |
-${tpSection}${fleetSection}
+${tpSection}${fleetSection}${pipelineSection}${proofSection}
 ## Why this matters
 
 ${whyBlock}
@@ -885,6 +1089,7 @@ bun run lab:bench:partial -- --n=100 --used=500
 bun run lab:bench:thirdparty -- --n=100
 bun run lab:bench:thirdparty:real -- --n=100
 bun run lab:bench:fleet -- --n=50 --consumers=100
+bun run lab:bench:realistic
 bun run lab:bench:coldstart
 \`\`\`
 `;

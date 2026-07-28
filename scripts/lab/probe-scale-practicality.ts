@@ -119,9 +119,9 @@ function writePartialFixtures(
   mkdirSync(fixDir, { recursive: true });
 
   const esmImports = usedIds
-    .map((i) => `import { used as used_${i} } from "@lab/esm-svc-${i}";`)
+    .map((i) => `import * as Svc${i} from "@lab/esm-svc-${i}";`)
     .join("\n");
-  const esmCalls = usedIds.map((i) => `used_${i}()`).join(", ");
+  const esmCalls = usedIds.map((i) => `Svc${i}.used()`).join(", ");
   const esmPath = join(fixDir, "esm-entry.partial.ts");
   writeFileSync(
     esmPath,
