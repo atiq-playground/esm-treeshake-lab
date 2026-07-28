@@ -28,6 +28,7 @@ import {
   buildRequestArmProbeSource,
   parseRequestArmProbeStdout,
   requestArmSpawnArgs,
+  requestArmSpawnTimeoutMs,
 } from "./request-bench-arm.ts";
 
 const ROOT = join(import.meta.dir, "../..");
@@ -109,11 +110,20 @@ function measureArm(arm: "singleton" | "esm"): RequestArmMetrics {
     probePath,
     parentEnv: process.env,
   });
+  const timeout = requestArmSpawnTimeoutMs({ warmup, measured });
   const node = spawnSync(command, args, {
     cwd: ROOT,
     encoding: "utf8",
     env,
+    timeout,
+    killSignal: "SIGKILL",
+    maxBuffer: 16 * 1024 * 1024,
   });
+  if (node.error) {
+    throw new Error(
+      `Request arm probe failed for ${arm}: ${node.error.message} (timeout=${timeout}ms)`,
+    );
+  }
   if (node.status !== 0) {
     console.error(node.stderr || node.stdout);
     throw new Error(

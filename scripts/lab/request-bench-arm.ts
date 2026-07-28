@@ -9,6 +9,15 @@ export const REQUEST_ARM_ISOLATION = {
   clearNodeOptions: true,
 } as const;
 
+/** Floor so tiny local smoke runs still get a sane child timeout. */
+export const REQUEST_ARM_SPAWN_TIMEOUT_FLOOR_MS = 60_000;
+
+/**
+ * Per-request budget for child timeout sizing (warmup + measured POSTs).
+ * Generous vs expected sub-ms/ms latencies; bounds hung keep-alive / stuck probes.
+ */
+export const REQUEST_ARM_SPAWN_TIMEOUT_PER_REQUEST_MS = 5_000;
+
 export type RequestArmProbePayload = {
   latenciesMs: number[];
   warmup: number;
@@ -19,6 +28,15 @@ export type RequestArmProbePayload = {
   rssBytes: number;
   heapUsedBytes: number;
 };
+
+export function requestArmSpawnTimeoutMs(input: {
+  warmup: number;
+  measured: number;
+}): number {
+  const scaled =
+    (input.warmup + input.measured) * REQUEST_ARM_SPAWN_TIMEOUT_PER_REQUEST_MS;
+  return Math.max(REQUEST_ARM_SPAWN_TIMEOUT_FLOOR_MS, scaled);
+}
 
 /**
  * Generates an ESM worker that imports a single arm bundle, serves
@@ -105,6 +123,9 @@ for (let i = 0; i < measured; i++) {
 const cpu = process.cpuUsage(cpu0);
 const mem = process.memoryUsage();
 
+if (typeof server.closeAllConnections === "function") {
+  server.closeAllConnections();
+}
 await new Promise((resolve, reject) => {
   server.close((err) => (err ? reject(err) : resolve()));
 });
@@ -122,12 +143,25 @@ process.stdout.write(JSON.stringify({
 `;
 }
 
+function extractJsonObjectText(stdout: string): string {
+  const trimmed = stdout.trim();
+  if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+    return trimmed;
+  }
+  const start = trimmed.lastIndexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return trimmed.slice(start, end + 1);
+  }
+  return trimmed;
+}
+
 export function parseRequestArmProbeStdout(
   stdout: string,
 ): RequestArmProbePayload {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(stdout.trim());
+    parsed = JSON.parse(extractJsonObjectText(stdout));
   } catch {
     throw new Error("Invalid request arm probe payload: not JSON");
   }
@@ -153,6 +187,11 @@ export function parseRequestArmProbeStdout(
     if (typeof o[key] !== "number" || !Number.isFinite(o[key])) {
       throw new Error(`Invalid request arm probe payload: ${key}`);
     }
+  }
+  if (o.latenciesMs.length !== o.measured) {
+    throw new Error(
+      `Invalid request arm probe payload: latenciesMs length ${o.latenciesMs.length} !== measured ${o.measured}`,
+    );
   }
   return {
     latenciesMs: o.latenciesMs as number[],
