@@ -1,6 +1,6 @@
 # Scale bench realistic
 
-- **When:** 2026-07-28T19:12:24.572Z
+- **When:** 2026-07-28T19:19:56.313Z
 - **Case:** realistic
 - **N:** 100
 - **Fns/svc:** 20
@@ -20,8 +20,8 @@ Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface fun
 
 | Arm | Size | Build (ms) | Used markers | Unused retained | 3p markers |
 |-----|------|----------:|-------------:|----------------:|-----------:|
-| Singleton | 4,368,709 B · 4266.3 KB · 4.17 MB | 154 | 100 | 1900 | 4 |
-| ESM | 2,033,506 B · 1985.8 KB · 1.94 MB | 103 | 100 | 900 | 1 |
+| Singleton | 4,368,709 B · 4266.3 KB · 4.17 MB | 203 | 100 | 1900 | 4 |
+| ESM | 2,033,506 B · 1985.8 KB · 1.94 MB | 135 | 100 | 900 | 1 |
 
 ## Benefit (percentage comparison)
 
@@ -52,26 +52,26 @@ Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface fun
 
 | Arm | generate (ms) | install (ms) | bundle (ms) | artifact bytes | upload (ms) | pipeline total (ms) |
 |-----|-------------:|-------------:|-----------:|---------------:|------------:|--------------------:|
-| Singleton | 98 | 86 | 208 | 4,368,709 | — | 392 |
-| ESM | 98 | 86 | 112 | 2,033,506 | — | 296 |
+| Singleton | 107 | 83 | 209 | 4,368,709 | — | 399 |
+| ESM | 107 | 83 | 123 | 2,033,506 | — | 313 |
 
 
 ### Warm
 
 | Arm | generate (ms) | install (ms) | bundle (ms) | artifact bytes | upload (ms) | pipeline total (ms) |
 |-----|-------------:|-------------:|-----------:|---------------:|------------:|--------------------:|
-| Singleton | 131 | 86 | 154 | 4,368,709 | — | 371 |
-| ESM | 131 | 86 | 103 | 2,033,506 | — | 320 |
+| Singleton | 133 | 93 | 203 | 4,368,709 | — | 429 |
+| ESM | 133 | 93 | 135 | 2,033,506 | — | 361 |
 
 
 ## Proof
 
 | | |
 |--|--|
-| Timestamp | 2026-07-28T19:12:24.572Z |
+| Timestamp | 2026-07-28T19:19:56.313Z |
 | Runner | github-actions |
-| GitHub run | https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30390892661 |
-| Run id | 30390892661 |
+| GitHub run | https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30391454216 |
+| Run id | 30391454216 |
 
 ## Request-time (Node HTTP)
 
@@ -79,8 +79,8 @@ Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface fun
 
 | Arm | p50 (ms) | p95 (ms) | CPU user (ms) | CPU system (ms) | RSS | Heap |
 |-----|---------:|---------:|--------------:|----------------:|----:|-----:|
-| Singleton | 1.7 | 1.99 | 870.85 | 80.9 | 123,502,592 | 37,792,144 |
-| ESM | 1.67 | 1.91 | 825.46 | 81.41 | 127,221,760 | 35,843,744 |
+| Singleton | 1.68 | 2.02 | 869.24 | 65.39 | 133,722,112 | 37,960,328 |
+| ESM | 1.67 | 1.89 | 835.66 | 63.53 | 121,524,224 | 24,868,936 |
 
 Warmup discarded: 50; measured: 1000; concurrency: 1. Fresh Node process per arm.
 

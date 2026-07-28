@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-07-28T19:12:24.572Z",
+  "timestamp": "2026-07-28T19:19:56.313Z",
   "case": "realistic",
   "n": 100,
   "fns": 20,
@@ -122,7 +122,7 @@
   "arms": {
     "singleton": {
       "bytes": 4368709,
-      "buildMs": 154,
+      "buildMs": 203,
       "markersUsedPresent": 100,
       "markersUnusedRetained": 1900,
       "markersUnusedTotal": 1900,
@@ -138,7 +138,7 @@
     },
     "esm": {
       "bytes": 2033506,
-      "buildMs": 103,
+      "buildMs": 135,
       "markersUsedPresent": 100,
       "markersUnusedRetained": 900,
       "markersUnusedTotal": 1900,
@@ -173,45 +173,45 @@
   "pipeline": {
     "warm": {
       "singleton": {
-        "generateMs": 131,
-        "installMs": 86,
-        "bundleMs": 154,
+        "generateMs": 133,
+        "installMs": 93,
+        "bundleMs": 203,
         "artifactBytes": 4368709,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 371
+        "pipelineTotalMs": 429
       },
       "esm": {
-        "generateMs": 131,
-        "installMs": 86,
-        "bundleMs": 103,
+        "generateMs": 133,
+        "installMs": 93,
+        "bundleMs": 135,
         "artifactBytes": 2033506,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 320
+        "pipelineTotalMs": 361
       }
     },
     "cold": {
       "singleton": {
-        "generateMs": 98,
-        "installMs": 86,
-        "bundleMs": 208,
+        "generateMs": 107,
+        "installMs": 83,
+        "bundleMs": 209,
         "artifactBytes": 4368709,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 392
+        "pipelineTotalMs": 399
       },
       "esm": {
-        "generateMs": 98,
-        "installMs": 86,
-        "bundleMs": 112,
+        "generateMs": 107,
+        "installMs": 83,
+        "bundleMs": 123,
         "artifactBytes": 2033506,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 296
+        "pipelineTotalMs": 313
       }
     }
   },
   "proof": {
-    "timestamp": "2026-07-28T19:12:28.746Z",
-    "githubRunUrl": "https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30390892661",
-    "githubRunId": "30390892661",
+    "timestamp": "2026-07-28T19:20:00.464Z",
+    "githubRunUrl": "https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30391454216",
+    "githubRunId": "30391454216",
     "runner": "github-actions"
   },
   "request": {
@@ -220,13 +220,13 @@
       "measured": 1000,
       "concurrency": 1,
       "latencyMs": {
-        "p50": 1.7,
-        "p95": 1.99
+        "p50": 1.68,
+        "p95": 2.02
       },
-      "cpuUserMs": 870.85,
-      "cpuSystemMs": 80.9,
-      "rssBytes": 123502592,
-      "heapUsedBytes": 37792144
+      "cpuUserMs": 869.24,
+      "cpuSystemMs": 65.39,
+      "rssBytes": 133722112,
+      "heapUsedBytes": 37960328
     },
     "esm": {
       "warmup": 50,
@@ -234,12 +234,12 @@
       "concurrency": 1,
       "latencyMs": {
         "p50": 1.67,
-        "p95": 1.91
+        "p95": 1.89
       },
-      "cpuUserMs": 825.46,
-      "cpuSystemMs": 81.41,
-      "rssBytes": 127221760,
-      "heapUsedBytes": 35843744
+      "cpuUserMs": 835.66,
+      "cpuSystemMs": 63.53,
+      "rssBytes": 121524224,
+      "heapUsedBytes": 24868936
     },
     "disclaimer": "Fresh Node process per arm (isolated RSS/heap). Node HTTP on GitHub Actions / local is not a Cloudflare isolate boot and is not production gateway RPS. Relative arm comparison only."
   },
