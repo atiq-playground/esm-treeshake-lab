@@ -1,8 +1,9 @@
 /**
  * Request-time harness for the realistic GraphQL case.
  *
- * Per arm: thin Node HTTP server importing that arm’s esbuild bundle.
- * POST /invoke runs one full pass of wired call sites (bundle `invoke()`).
+ * Per arm: fresh Node child importing that arm’s esbuild bundle only,
+ * thin HTTP server, warmup + measured POST /invoke (bundle `invoke()`).
+ * RSS/heap/cpu come from that child — arms do not share a resident graph.
  *
  * Defaults: warmup 50 (discard), measured 1000, concurrency 1.
  * Writes `request.singleton` / `request.esm` once into the realistic report
@@ -11,14 +12,9 @@
  *   bun run scripts/lab/run-request-bench.ts
  *   bun run scripts/lab/run-request-bench.ts --warmup=2 --measured=5
  */
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from "node:http";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   buildProofFromEnv,
   buildRequestArmMetrics,
@@ -28,6 +24,11 @@ import {
   type RequestArmMetrics,
   type RequestReport,
 } from "./bench-metrics.ts";
+import {
+  buildRequestArmProbeSource,
+  parseRequestArmProbeStdout,
+  requestArmSpawnArgs,
+} from "./request-bench-arm.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const OUT_DIR = join(ROOT, "tmp/lab-bench");
@@ -93,114 +94,44 @@ function resolveBundle(arm: "singleton" | "esm"): string {
   return path;
 }
 
-type InvokeModule = { invoke?: () => unknown };
+function measureArm(arm: "singleton" | "esm"): RequestArmMetrics {
+  const bundlePath = resolveBundle(arm);
+  mkdirSync(OUT_DIR, { recursive: true });
+  const probePath = join(OUT_DIR, `request-probe-${arm}.mjs`);
+  writeFileSync(
+    probePath,
+    buildRequestArmProbeSource({ bundlePath, warmup, measured }),
+  );
 
-async function loadInvoke(bundlePath: string): Promise<() => unknown> {
-  const mod = (await import(pathToFileURL(bundlePath).href)) as InvokeModule;
-  if (typeof mod.invoke !== "function") {
+  // Fresh Node process so RSS/heap reflect this arm’s graph only
+  // (plus Node baseline). Prefer node over bun for host=node labeling.
+  const { command, args, env } = requestArmSpawnArgs({
+    probePath,
+    parentEnv: process.env,
+  });
+  const node = spawnSync(command, args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    env,
+  });
+  if (node.status !== 0) {
+    console.error(node.stderr || node.stdout);
     throw new Error(
-      `Bundle ${bundlePath} does not export invoke(). Re-run lab:bench:realistic.`,
+      `Request arm probe failed for ${arm} (exit ${node.status ?? 1})`,
     );
   }
-  return mod.invoke;
-}
 
-function readBody(req: IncomingMessage): Promise<void> {
-  return new Promise((resolve, reject) => {
-    req.on("data", () => {});
-    req.on("end", () => resolve());
-    req.on("error", reject);
+  const payload = parseRequestArmProbeStdout(node.stdout);
+  return buildRequestArmMetrics({
+    latenciesMs: payload.latenciesMs,
+    warmup: payload.warmup,
+    measured: payload.measured,
+    concurrency: payload.concurrency,
+    cpuUserMs: payload.cpuUserMs,
+    cpuSystemMs: payload.cpuSystemMs,
+    rssBytes: payload.rssBytes,
+    heapUsedBytes: payload.heapUsedBytes,
   });
-}
-
-async function withArmServer(
-  invoke: () => unknown,
-  run: (baseUrl: string) => Promise<void>,
-): Promise<void> {
-  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    try {
-      if (req.method === "POST" && req.url === "/invoke") {
-        await readBody(req);
-        const out = invoke();
-        res.statusCode = 200;
-        res.setHeader("content-type", "text/plain; charset=utf-8");
-        res.end(typeof out === "string" ? out : String(out));
-        return;
-      }
-      res.statusCode = 404;
-      res.end("not found");
-    } catch (err) {
-      res.statusCode = 500;
-      res.end(err instanceof Error ? err.message : "error");
-    }
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    server.listen(0, "127.0.0.1", () => resolve());
-    server.on("error", reject);
-  });
-
-  const addr = server.address();
-  if (addr == null || typeof addr === "string") {
-    server.close();
-    throw new Error("Failed to bind request bench server");
-  }
-  const baseUrl = `http://127.0.0.1:${addr.port}`;
-  try {
-    await run(baseUrl);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => (err ? reject(err) : resolve()));
-    });
-  }
-}
-
-async function postInvoke(baseUrl: string): Promise<number> {
-  const t0 = performance.now();
-  const res = await fetch(`${baseUrl}/invoke`, { method: "POST" });
-  if (!res.ok) {
-    throw new Error(`POST /invoke failed: ${res.status} ${await res.text()}`);
-  }
-  await res.text();
-  return performance.now() - t0;
-}
-
-async function measureArm(
-  arm: "singleton" | "esm",
-): Promise<RequestArmMetrics> {
-  const bundlePath = resolveBundle(arm);
-  const invoke = await loadInvoke(bundlePath);
-
-  let metrics: RequestArmMetrics | null = null;
-  await withArmServer(invoke, async (baseUrl) => {
-    for (let i = 0; i < warmup; i++) {
-      await postInvoke(baseUrl);
-    }
-
-    const cpu0 = process.cpuUsage();
-    const latencies: number[] = [];
-    for (let i = 0; i < measured; i++) {
-      latencies.push(await postInvoke(baseUrl));
-    }
-    const cpu = process.cpuUsage(cpu0);
-    const mem = process.memoryUsage();
-
-    metrics = buildRequestArmMetrics({
-      latenciesMs: latencies,
-      warmup,
-      measured,
-      concurrency,
-      cpuUserMs: Number((cpu.user / 1000).toFixed(2)),
-      cpuSystemMs: Number((cpu.system / 1000).toFixed(2)),
-      rssBytes: mem.rss,
-      heapUsedBytes: mem.heapUsed,
-    });
-  });
-
-  if (metrics == null) {
-    throw new Error(`Failed to measure ${arm}`);
-  }
-  return metrics;
 }
 
 const reportPath = resolveReportPath();
@@ -209,11 +140,13 @@ const prior = JSON.parse(readFileSync(reportPath, "utf8")) as Record<
   unknown
 >;
 
-console.log(`Request bench: warmup=${warmup} measured=${measured} concurrency=${concurrency}`);
+console.log(
+  `Request bench: warmup=${warmup} measured=${measured} concurrency=${concurrency} (fresh Node per arm)`,
+);
 console.log(`  report ← ${reportPath}`);
 
-const singleton = await measureArm("singleton");
-const esm = await measureArm("esm");
+const singleton = measureArm("singleton");
+const esm = measureArm("esm");
 
 const request: NonNullable<RequestReport> = {
   singleton,
@@ -250,7 +183,7 @@ if (existsSync(mdPath)) {
 | Singleton | ${singleton.latencyMs.p50} | ${singleton.latencyMs.p95} | ${singleton.cpuUserMs} | ${singleton.cpuSystemMs} | ${singleton.rssBytes.toLocaleString("en-US")} | ${singleton.heapUsedBytes.toLocaleString("en-US")} |
 | ESM | ${esm.latencyMs.p50} | ${esm.latencyMs.p95} | ${esm.cpuUserMs} | ${esm.cpuSystemMs} | ${esm.rssBytes.toLocaleString("en-US")} | ${esm.heapUsedBytes.toLocaleString("en-US")} |
 
-Warmup discarded: ${warmup}; measured: ${measured}; concurrency: ${concurrency}.
+Warmup discarded: ${warmup}; measured: ${measured}; concurrency: ${concurrency}. Fresh Node process per arm.
 `;
   if (md.includes("## Request-time (Node HTTP)")) {
     md = md.replace(
@@ -272,7 +205,9 @@ console.log(`
   ${REQUEST_DISCLAIMER}
 
   SINGLETON  p50=${singleton.latencyMs.p50}ms  p95=${singleton.latencyMs.p95}ms
+             RSS=${singleton.rssBytes.toLocaleString("en-US")}  heap=${singleton.heapUsedBytes.toLocaleString("en-US")}
   ESM        p50=${esm.latencyMs.p50}ms  p95=${esm.latencyMs.p95}ms
+             RSS=${esm.rssBytes.toLocaleString("en-US")}  heap=${esm.heapUsedBytes.toLocaleString("en-US")}
 
   → ${reportPath}
 `);
