@@ -1,17 +1,25 @@
 import Link from "next/link";
 import { HomeLayout } from "fumadocs-ui/layouts/home";
 import { GitHubIcon, LinkedInIcon, XIcon } from "@/components/brand-icons";
+import {
+  CycleRingMetaphor,
+  PackagingMetaphor,
+} from "@/components/packaging-metaphor";
 import { SupportCta } from "@/components/support-cta";
+import { QuickFacts } from "@/components/quick-facts";
 import { UseCaseComparisonChart } from "@/components/use-case-comparison-chart";
 import { baseOptions } from "@/lib/layout.shared";
 import { loadUseCaseComparison } from "@/lib/benchmark";
+import { loadQuickFacts } from "@/lib/quick-facts";
 import { SITE_LINKS, withUtm } from "@/lib/site-links";
 
 export default async function HomePage() {
   const comparison = loadUseCaseComparison();
+  const quickFacts = loadQuickFacts();
   const { min, max } = comparison.savedPctRange;
   const peak = comparison.largestSave;
   const isRange = min !== max;
+  const peakFactor = peak.singletonVsEsmFactor ?? 1;
 
   return (
     <HomeLayout {...baseOptions()}>
@@ -49,27 +57,38 @@ export default async function HomePage() {
             {peak.plainTitle.toLowerCase()})
           </p>
           <p className="text-[length:var(--body)] text-[color:var(--text-secondary)]">
-            Same schema, same resolvers you actually bind — different packaging.
+            Same K call sites. Different bag.
           </p>
         </header>
 
-        <div className="flex max-w-xl flex-col gap-3 text-[length:var(--body)] leading-relaxed text-[color:var(--text-primary)]">
-          <p>
-            Picture a GraphQL service whose resolver map{" "}
-            <em>can</em> reach ~100 first-party domain packages — not “I
-            installed 100 random npm libs,” but a real domain surface the schema
-            might touch. One style side-effect-imports every package (plugin /
-            singleton registry). The other imports only the resolvers you bind.
-            Green bars are selective ESM. See{" "}
-            <Link href="/docs/why">Why</Link>.
-          </p>
-          <p className="text-[length:var(--caption)] text-[color:var(--text-secondary)]">
-            Stub packages only. We do <strong>not</strong> include{" "}
-            <code className="lab-mono text-xs">graphql</code>, DataLoader, ORMs,
-            auth SDKs, or other third-party deps — those can grow the bundle far
-            more. The gap here is the first-party module graph alone.
-          </p>
-        </div>
+        <section className="flex flex-col gap-6">
+          <div className="flex max-w-xl flex-col gap-2 text-[length:var(--body)] leading-relaxed text-[color:var(--text-primary)]">
+            <p>
+              A GraphQL façade that <em>can</em> reach ~100 first-party domain
+              packages. One packaging style side-effect-imports a registry hub —
+              every box loads, every export stays live. The other imports only
+              the resolvers you bind.{" "}
+              <Link href="/docs/why">Why</Link>.
+            </p>
+            <p className="text-[length:var(--caption)] text-[color:var(--text-secondary)]">
+              Stub packages only — not real{" "}
+              <code className="lab-mono text-xs">graphql</code>, ORMs, or auth
+              SDKs. The chart below is the first-party module graph. Quick facts
+              also cite measured stub third-party ballast and a 100-consumer
+              fleet (×M, not a shared chunk); see{" "}
+              <Link href="/docs/research">Research</Link>.
+            </p>
+          </div>
+
+          <PackagingMetaphor
+            singletonSize={peak.singletonPrimary}
+            esmSize={peak.esmPrimary}
+            factor={peakFactor}
+            caseTitle={peak.plainTitle}
+          />
+
+          <CycleRingMetaphor />
+        </section>
 
         <section className="flex flex-col gap-4">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-6">
@@ -105,6 +124,8 @@ export default async function HomePage() {
             ))}
           </ul>
         </section>
+
+        <QuickFacts summary={quickFacts} />
 
         <section className="flex flex-col gap-4">
           <p className="lab-label">Try it yourself</p>

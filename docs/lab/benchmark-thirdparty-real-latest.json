@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-28T02:28:13.982Z",
+  "case": "thirdparty",
+  "n": 100,
+  "fns": 2,
+  "cycles": false,
+  "callSites": 1,
+  "usedPackageIds": [
+    0
+  ],
+  "seed": null,
+  "surfaceFns": 200,
+  "consumers": 1,
+  "thirdParty": {
+    "count": 4,
+    "bytesPerPackage": 32768,
+    "mode": "real"
+  },
+  "host": "esbuild",
+  "mode": "generated",
+  "note": "Third-party ballast (real pinned npm): every domain package side-effect-imports @lab/3p-core → graphql; the singleton register also imports 3 unused extras (dataloader / graphql-tag / uuid wrappers). Shared core is paid on both arms; unused extras stay singleton-only. Versions pinned in package.json/lockfile for CI reproducibility.",
+  "arms": {
+    "singleton": {
+      "bytes": 355478,
+      "buildMs": 68,
+      "markersUsedPresent": 100,
+      "markersUnusedRetained": 100,
+      "markersUnusedTotal": 100,
+      "thirdPartyMarkersRetained": 4,
+      "size": {
+        "bytes": 355478,
+        "kb": 347.146,
+        "mb": 0.339,
+        "gb": 0.000331,
+        "primary": "347.1 KB",
+        "detail": "355,478 B · 347.1 KB · 0.34 MB"
+      }
+    },
+    "esm": {
+      "bytes": 2484,
+      "buildMs": 15,
+      "markersUsedPresent": 1,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 1,
+      "thirdPartyMarkersRetained": 1,
+      "size": {
+        "bytes": 2484,
+        "kb": 2.426,
+        "mb": 0.0024,
+        "gb": 0.000002,
+        "primary": "2.4 KB",
+        "detail": "2,484 B · 2.4 KB"
+      }
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 99.3,
+    "bytesSaved": 352994,
+    "sizeSaved": {
+      "bytes": 352994,
+      "kb": 344.721,
+      "mb": 0.3366,
+      "gb": 0.000329,
+      "primary": "344.7 KB",
+      "detail": "352,994 B · 344.7 KB · 0.34 MB"
+    },
+    "unusedMarkersDelta": 100,
+    "esmOfSingletonPct": 0.7,
+    "singletonVsEsmFactor": 143.1,
+    "callSiteCoveragePct": 0.5,
+    "unusedRemovedPct": 100
+  },
+  "methodologyLimits": "Real npm path pins graphql + dataloader + graphql-tag + uuid. esbuild bundles their reachable graphs; CJS interop and peer trees still differ from production Workers installs. Stub path remains default for byte-floor CI."
+}

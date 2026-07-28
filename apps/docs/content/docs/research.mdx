@@ -9,6 +9,20 @@ description: Notes behind the lab
 
 That sweep uses a **thin call-site model** (mostly K=1). The docs **home** chart uses a separate **GraphQL-shaped** N=100 story: bind ~2–5 resolvers per domain package (`--used=200|300|500`). See [Run](/docs/run) and the “Landing-shaped benches” section in the research note.
 
+## Beyond first-party GraphQL (3p + fleet + cold start)
+
+UC1–UC4 deliberately omit real npm deps on the home chart. Sibling benches add datapoints — Quick facts on Home / Why cite the measured sample rows:
+
+| Case | Command | Sample (this machine) | What it models |
+|------|---------|----------------------:|----------------|
+| Third-party ballast (stub) | `lab:bench:thirdparty -- --n=100` | 386 KB → 32.4 KB (91.6%) | Stub `@lab/3p-*` (shared core + unused extras). |
+| Third-party (real npm) | `lab:bench:thirdparty:real -- --n=100` | 347 KB → 2.4 KB (99.3%) | Pinned `graphql` + unused dataloader/graphql-tag/uuid. |
+| Fleet naive ×M | `lab:bench:fleet -- --n=50 --consumers=100` | ~12.56 MB → ~19.5 KB (99.8%) | M separate deploys each pay the registry. |
+| Fleet shared multi-entry | same (`--fleet-mode=both`) | ~155 KB → ~16 KB | One esbuild multi-entry; shared chunks counted once (−98.8% vs naive singleton). |
+| Cold start / RSS | `lab:bench:coldstart -- --n=50` | 1.97 ms → 0.33 ms import; ~1 MB RSS Δ | Node cold import — not Workers isolate boot. |
+
+Artifacts: [thirdparty](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-thirdparty-latest.md), [thirdparty-real](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-thirdparty-real-latest.md), [fleet](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-fleet-latest.md), [coldstart](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-coldstart-latest.md). Notes: [docs/research/thirdparty-fleet-datapoints.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/thirdparty-fleet-datapoints.md). CI stays UC1 smoke.
+
 ## Next + tsc namespaces
 
 [docs/research/next-tsc-namespace-treeshaking.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/research/next-tsc-namespace-treeshaking.md) and [ADR 0001](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/adr/0001-namespace-shaped-const-over-export-namespace.md): why namespace-shaped `export const` beats TypeScript `export namespace` for member shake-out under Next.

@@ -1,0 +1,174 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-28T02:28:14.278Z",
+  "case": "fleet",
+  "n": 50,
+  "fns": 2,
+  "cycles": false,
+  "callSites": 1,
+  "usedPackageIds": [
+    0
+  ],
+  "seed": null,
+  "surfaceFns": 100,
+  "consumers": 100,
+  "fleetMode": "both",
+  "thirdParty": null,
+  "host": "esbuild",
+  "mode": "generated",
+  "note": "Multi-consumer / non-GraphQL framing: 100 identical frontend apps (or services). Naive fleet totals = per-consumer × M (each app pays the graph again). Also measured: one esbuild multi-entry (splitting) across M entries so shared modules are not naively ×M (singleton shared saves 98.8% vs naive ×M). Story is React/SDK consumers, not GraphQL resolvers.",
+  "arms": {
+    "singleton": {
+      "bytes": 131678,
+      "buildMs": 33,
+      "markersUsedPresent": 50,
+      "markersUnusedRetained": 50,
+      "markersUnusedTotal": 50,
+      "thirdPartyMarkersRetained": 0,
+      "size": {
+        "bytes": 131678,
+        "kb": 128.592,
+        "mb": 0.1256,
+        "gb": 0.000123,
+        "primary": "128.6 KB",
+        "detail": "131,678 B · 128.6 KB · 0.13 MB"
+      }
+    },
+    "esm": {
+      "bytes": 200,
+      "buildMs": 2,
+      "markersUsedPresent": 1,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 1,
+      "thirdPartyMarkersRetained": 0,
+      "size": {
+        "bytes": 200,
+        "kb": 0.195,
+        "mb": 0.0002,
+        "gb": 0,
+        "primary": "200 B",
+        "detail": "200 B"
+      }
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 99.8,
+    "bytesSaved": 131478,
+    "sizeSaved": {
+      "bytes": 131478,
+      "kb": 128.396,
+      "mb": 0.1254,
+      "gb": 0.000122,
+      "primary": "128.4 KB",
+      "detail": "131,478 B · 128.4 KB · 0.13 MB"
+    },
+    "unusedMarkersDelta": 50,
+    "esmOfSingletonPct": 0.15,
+    "singletonVsEsmFactor": 658.4,
+    "callSiteCoveragePct": 1,
+    "unusedRemovedPct": 100
+  },
+  "fleet": {
+    "consumers": 100,
+    "singletonBytes": 13167800,
+    "esmBytes": 20000,
+    "bytesSaved": 13147800,
+    "bytesSavedPct": 99.8,
+    "singletonVsEsmFactor": 658.4,
+    "mode": "both",
+    "singletonSize": {
+      "bytes": 13167800,
+      "kb": 12859.18,
+      "mb": 12.5578,
+      "gb": 0.012263,
+      "primary": "12.56 MB",
+      "detail": "13,167,800 B · 12859.2 KB · 12.56 MB · 0.01 GB"
+    },
+    "esmSize": {
+      "bytes": 20000,
+      "kb": 19.531,
+      "mb": 0.0191,
+      "gb": 0.000019,
+      "primary": "19.5 KB",
+      "detail": "20,000 B · 19.5 KB · 0.02 MB"
+    },
+    "sizeSaved": {
+      "bytes": 13147800,
+      "kb": 12839.648,
+      "mb": 12.5387,
+      "gb": 0.012245,
+      "primary": "12.54 MB",
+      "detail": "13,147,800 B · 12839.6 KB · 12.54 MB · 0.01 GB"
+    },
+    "naive": {
+      "consumers": 100,
+      "singletonBytes": 13167800,
+      "esmBytes": 20000,
+      "bytesSaved": 13147800,
+      "bytesSavedPct": 99.8,
+      "singletonVsEsmFactor": 658.4,
+      "singletonSize": {
+        "bytes": 13167800,
+        "kb": 12859.18,
+        "mb": 12.5578,
+        "gb": 0.012263,
+        "primary": "12.56 MB",
+        "detail": "13,167,800 B · 12859.2 KB · 12.56 MB · 0.01 GB"
+      },
+      "esmSize": {
+        "bytes": 20000,
+        "kb": 19.531,
+        "mb": 0.0191,
+        "gb": 0.000019,
+        "primary": "19.5 KB",
+        "detail": "20,000 B · 19.5 KB · 0.02 MB"
+      },
+      "sizeSaved": {
+        "bytes": 13147800,
+        "kb": 12839.648,
+        "mb": 12.5387,
+        "gb": 0.012245,
+        "primary": "12.54 MB",
+        "detail": "13,147,800 B · 12839.6 KB · 12.54 MB · 0.01 GB"
+      }
+    },
+    "shared": {
+      "consumers": 100,
+      "singletonBytes": 158834,
+      "esmBytes": 16400,
+      "bytesSaved": 142434,
+      "bytesSavedPct": 89.7,
+      "singletonVsEsmFactor": 9.7,
+      "singletonChunkCount": 101,
+      "esmChunkCount": 101,
+      "singletonBuildMs": 34,
+      "esmBuildMs": 11,
+      "singletonSize": {
+        "bytes": 158834,
+        "kb": 155.111,
+        "mb": 0.1515,
+        "gb": 0.000148,
+        "primary": "155.1 KB",
+        "detail": "158,834 B · 155.1 KB · 0.15 MB"
+      },
+      "esmSize": {
+        "bytes": 16400,
+        "kb": 16.016,
+        "mb": 0.0156,
+        "gb": 0.000015,
+        "primary": "16 KB",
+        "detail": "16,400 B · 16 KB · 0.02 MB"
+      },
+      "sizeSaved": {
+        "bytes": 142434,
+        "kb": 139.096,
+        "mb": 0.1358,
+        "gb": 0.000133,
+        "primary": "139.1 KB",
+        "detail": "142,434 B · 139.1 KB · 0.14 MB"
+      }
+    },
+    "sharingSavingsPct": 98.8
+  },
+  "methodologyLimits": "Naive fleet totals multiply one measured consumer graph by M. Shared mode bundles M esbuild entries with code-splitting so common modules are counted once. Ignores CDN caches and per-app bind differences. Not a Workers isolate boot."
+}

@@ -24,6 +24,10 @@
     "lab:bench:wide": "bun run scripts/lab/run-scale-bench.ts --case=wide",
     "lab:bench:cycles": "bun run scripts/lab/run-scale-bench.ts --case=cycles",
     "lab:bench:partial": "bun run scripts/lab/run-scale-bench.ts --case=partial",
+    "lab:bench:thirdparty": "bun run scripts/lab/run-scale-bench.ts --case=thirdparty",
+    "lab:bench:thirdparty:real": "bun run scripts/lab/run-scale-bench.ts --case=thirdparty --3p=real",
+    "lab:bench:fleet": "bun run scripts/lab/run-scale-bench.ts --case=fleet",
+    "lab:bench:coldstart": "bun run scripts/lab/run-coldstart-bench.ts",
     "lab:probe:scale": "bun run scripts/lab/probe-scale-practicality.ts",
     "orchestrate": "bun run .sandcastle/orchestrate.ts"
   },
@@ -31,9 +35,13 @@
     "@ai-hero/sandcastle": "0.12.0",
     "@nx/next": "21.6.11",
     "@nx/web": "21.6.11",
+    "dataloader": "2.2.3",
     "esbuild": "^0.25.0",
+    "graphql": "16.11.0",
+    "graphql-tag": "2.12.6",
     "nx": "21.6.11",
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "uuid": "11.1.0"
   },
   "ignoreScripts": [
     "sharp",

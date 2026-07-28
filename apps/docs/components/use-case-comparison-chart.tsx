@@ -106,11 +106,11 @@ function ChartTooltip({
       <p className="flex items-baseline gap-2">
         <span
           className="inline-block h-2.5 w-2.5 shrink-0"
-          style={{ background: "var(--text-display)" }}
+          style={{ background: "var(--accent)" }}
           aria-hidden
         />
         <span>
-          <span style={{ color: "var(--text-display)" }}>Load everything</span>
+          <span style={{ color: "var(--accent)" }}>Load everything</span>
           {": "}
           {row.singletonPrimary}
         </span>
@@ -256,7 +256,7 @@ export function UseCaseComparisonChart({ rows }: Props) {
           <Bar
             dataKey="singletonKb"
             name="Load everything"
-            fill="var(--text-display)"
+            fill="var(--accent)"
             radius={0}
             maxBarSize={36}
           >

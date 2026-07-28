@@ -50,6 +50,26 @@ bun run lab:bench:partial -- --n=100 --used=500
 bun run lab:bench:partial -- --n=100 --used=500 --seed=42
 ```
 
+## Extended: third-party ballast + multi-consumer + cold start
+
+Not CI smoke. Sibling reports (do not overwrite UC1).
+
+```bash
+# Stub 3p weight (shared @lab/3p-core + unused @lab/3p-extra-*); default 4 × ~32KB ballast
+bun run lab:bench:thirdparty -- --n=100
+# Tiny local check
+bun run lab:bench:thirdparty -- --n=3 --3p-count=2 --3p-bytes=2048
+# Real pinned npm (graphql + dataloader / graphql-tag / uuid extras)
+bun run lab:bench:thirdparty:real -- --n=100
+
+# M frontend apps: naive ×M + esbuild multi-entry shared (--fleet-mode=both default)
+bun run lab:bench:fleet -- --n=50 --consumers=100
+bun run lab:bench:fleet -- --n=3 --consumers=10 --fleet-mode=both
+
+# Node cold import + RSS (not Workers isolate boot)
+bun run lab:bench:coldstart -- --n=50
+```
+
 ## Outputs
 
 | Path | Use |
@@ -60,6 +80,10 @@ bun run lab:bench:partial -- --n=100 --used=500 --seed=42
 | `docs/lab/benchmark-wide-latest.*` | UC2 |
 | `docs/lab/benchmark-cycles-latest.*` | UC3 |
 | `docs/lab/benchmark-partial-latest.*` | UC4 |
+| `docs/lab/benchmark-thirdparty-latest.*` | Stub third-party ballast |
+| `docs/lab/benchmark-thirdparty-real-latest.*` | Real pinned npm 3p |
+| `docs/lab/benchmark-fleet-latest.*` | Fleet naive ×M + shared multi-entry |
+| `docs/lab/benchmark-coldstart-latest.*` | Node cold import + RSS |
 
 ## Support
 

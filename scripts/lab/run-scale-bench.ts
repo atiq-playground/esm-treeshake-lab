@@ -6,12 +6,41 @@
  *   bun run scripts/lab/run-scale-bench.ts --case=wide --n=100 --used=300
  *   bun run scripts/lab/run-scale-bench.ts --case=cycles --n=100 --used=300
  *   bun run scripts/lab/run-scale-bench.ts --case=partial --n=100 --used=500
+ *   bun run scripts/lab/run-scale-bench.ts --case=thirdparty --n=100
+ *   bun run scripts/lab/run-scale-bench.ts --case=thirdparty --n=100 --3p=real
+ *   bun run scripts/lab/run-scale-bench.ts --case=fleet --n=50 --consumers=100
+ *   bun run scripts/lab/run-scale-bench.ts --case=fleet --n=3 --consumers=10 --fleet-mode=both
  */
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  rmSync,
+} from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import * as esbuild from "esbuild";
+import {
+  isBenchCase,
+  parseFleetMode,
+  parseThirdPartyConfig,
+  reportArtifactBase,
+  scaleFleetMetrics,
+  sharingSavingsPct,
+  sumOutputBytes,
+  type BenchCase,
+  type FleetMode,
+  type ThirdPartyConfig,
+} from "./bench-metrics.ts";
 import { byteParts, formatBytesDetail } from "./format-bytes.ts";
+import {
+  resolveThirdPartyPackage,
+  TP_CORE_MARKER,
+  tpExtraCount,
+  tpExtraMarker,
+} from "./third-party-stubs.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const OUT_DIR = join(ROOT, "tmp/lab-bench");
@@ -23,44 +52,106 @@ function argValue(flag: string): string | undefined {
   return hit?.slice(flag.length + 1);
 }
 
-type BenchCase = "baseline" | "wide" | "cycles" | "partial";
-
 const smoke = process.argv.includes("--smoke");
-const caseRaw = (argValue("--case") ?? "baseline") as BenchCase;
-if (!["baseline", "wide", "cycles", "partial"].includes(caseRaw)) {
-  console.error("Invalid --case (baseline|wide|cycles|partial)");
+const caseRaw = argValue("--case") ?? "baseline";
+if (!isBenchCase(caseRaw)) {
+  console.error(
+    "Invalid --case (baseline|wide|cycles|partial|thirdparty|fleet)",
+  );
+  process.exit(2);
+}
+if (smoke && (caseRaw === "thirdparty" || caseRaw === "fleet" || caseRaw === "coldstart")) {
+  console.error(
+    "UC1 --smoke cannot run thirdparty/fleet/coldstart. Use --case=… --n=3 (generated), or lab:bench:coldstart.",
+  );
   process.exit(2);
 }
 const benchCase: BenchCase = smoke ? "baseline" : caseRaw;
 
 const nFlag = argValue("--n");
-const n = smoke ? 3 : Number(nFlag ?? "100");
+const n = smoke ? 3 : Number(nFlag ?? (benchCase === "fleet" ? "50" : "100"));
 const mode = smoke ? "smoke" : "generated";
 
 const fnsFlag = argValue("--fns");
 const usedFlag = argValue("--used");
 const seedFlag = argValue("--seed");
 const cyclesFlag = process.argv.includes("--cycles");
+const consumersFlag = argValue("--consumers");
 
 let fns: number;
 let cycles: boolean;
-if (smoke || benchCase === "baseline") {
+let thirdParty: ThirdPartyConfig | null = null;
+if (smoke || benchCase === "baseline" || benchCase === "fleet") {
   fns = 2;
   cycles = false;
+} else if (benchCase === "thirdparty") {
+  fns = Number(fnsFlag ?? "2");
+  cycles = false;
+  try {
+    const modeFlag = argValue("--3p");
+    thirdParty = parseThirdPartyConfig({
+      mode:
+        modeFlag === "real" || modeFlag === "stub" ? modeFlag : "stub",
+      count:
+        argValue("--3p-count") != null
+          ? Number(argValue("--3p-count"))
+          : undefined,
+      bytesPerPackage:
+        argValue("--3p-bytes") != null
+          ? Number(argValue("--3p-bytes"))
+          : undefined,
+    });
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(2);
+  }
 } else if (benchCase === "wide" || benchCase === "partial") {
   fns = Number(fnsFlag ?? "20");
   cycles = false;
+} else if (benchCase === "coldstart") {
+  console.error("Use bun run lab:bench:coldstart (separate harness).");
+  process.exit(2);
 } else {
   // cycles
   fns = Number(fnsFlag ?? "20");
   cycles = true;
 }
-if (cyclesFlag && (benchCase === "baseline" || benchCase === "partial")) {
+if (cyclesFlag && (benchCase === "baseline" || benchCase === "partial" || benchCase === "thirdparty" || benchCase === "fleet")) {
   console.error("Cycles only via --case=cycles");
   process.exit(2);
 }
 if (!Number.isFinite(fns) || fns < 2 || fns > 200) {
   console.error("Invalid --fns (2..200)");
+  process.exit(2);
+}
+
+const consumersDefault = benchCase === "fleet" ? 100 : 1;
+const consumers =
+  consumersFlag != null ? Number(consumersFlag) : consumersDefault;
+if (
+  !Number.isFinite(consumers) ||
+  !Number.isInteger(consumers) ||
+  consumers < 1 ||
+  consumers > 100_000
+) {
+  console.error("Invalid --consumers (1..100000)");
+  process.exit(2);
+}
+if (benchCase !== "fleet" && consumersFlag != null && consumers !== 1) {
+  console.error("--consumers>1 only with --case=fleet");
+  process.exit(2);
+}
+
+let fleetMode: FleetMode = "both";
+if (benchCase === "fleet") {
+  try {
+    fleetMode = parseFleetMode(argValue("--fleet-mode"));
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(2);
+  }
+} else if (argValue("--fleet-mode") != null) {
+  console.error("--fleet-mode only with --case=fleet");
   process.exit(2);
 }
 
@@ -156,14 +247,9 @@ const expectedBoundUnusedMarkers = boundSites.filter(
   (s) => s.kind === "unused",
 ).length;
 
-const reportBase =
-  benchCase === "baseline"
-    ? "benchmark-latest"
-    : benchCase === "wide"
-      ? "benchmark-wide-latest"
-      : benchCase === "cycles"
-        ? "benchmark-cycles-latest"
-        : "benchmark-partial-latest";
+const reportBase = reportArtifactBase(benchCase, {
+  thirdPartyMode: thirdParty?.mode,
+});
 
 const pkgPrefix = smoke
   ? { singleton: "@lab/smoke-singleton-svc", esm: "@lab/smoke-esm-svc", register: "@lab/smoke-singleton-register" }
@@ -225,14 +311,25 @@ export const result = [${singletonCalls}].join("|");
 }
 
 if (!smoke) {
+  const genCase =
+    benchCase === "fleet"
+      ? "baseline"
+      : benchCase === "thirdparty"
+        ? "thirdparty"
+        : benchCase;
   const genArgs = [
     "run",
     "scripts/lab/generate-scale-bench.ts",
     `--n=${n}`,
     `--fns=${fns}`,
-    `--case=${benchCase}`,
+    `--case=${genCase}`,
   ];
   if (cycles) genArgs.push("--cycles");
+  if (thirdParty) {
+    genArgs.push(`--3p=${thirdParty.mode}`);
+    genArgs.push(`--3p-count=${thirdParty.count}`);
+    genArgs.push(`--3p-bytes=${thirdParty.bytesPerPackage}`);
+  }
   const gen = spawnSync("bun", genArgs, { cwd: ROOT, stdio: "inherit" });
   if (gen.status !== 0) process.exit(gen.status ?? 1);
   const install = spawnSync("bun", ["install"], {
@@ -261,7 +358,18 @@ type ArmMetrics = {
   markersUsedPresent: number;
   markersUnusedRetained: number;
   markersUnusedTotal: number;
+  /** Stub 3p markers retained (LAB_3P_CORE / LAB_3P_EXTRA_*). */
+  thirdPartyMarkersRetained: number;
 };
+
+function countThirdPartyMarkers(code: string): number {
+  if (thirdParty?.mode === "real") {
+    const hits = code.match(/LAB_3P_REAL_(?:CORE|EXTRA_\d+)/g) ?? [];
+    return new Set(hits).size;
+  }
+  const hits = code.match(/LAB_3P_(?:CORE|EXTRA_\d+)/g) ?? [];
+  return new Set(hits).size;
+}
 
 /** Bun workspace links are not always visible to esbuild: map @lab/* to source. */
 function resolveLabPackage(specifier: string): string | undefined {
@@ -274,6 +382,8 @@ function resolveLabPackage(specifier: string): string | undefined {
   if (specifier === "@lab/singleton-register") {
     return join(ROOT, "packages/lab/generated/singleton/register/src/index.ts");
   }
+  const tp = resolveThirdPartyPackage(ROOT, specifier, "generated");
+  if (tp) return tp;
   let m = /^@lab\/smoke-singleton-svc-(\d+)$/.exec(specifier);
   if (m) {
     return join(ROOT, `packages/lab/smoke/singleton/svc-${m[1]}/src/index.ts`);
@@ -319,9 +429,13 @@ async function bundleArm(
     format: "esm",
     platform: "neutral",
     target: "es2022",
+    // Real npm CJS packages (graphql-tag, dataloader) need main under neutral.
+    mainFields: ["module", "main"],
+    conditions: ["import", "module", "default"],
     write: true,
     logLevel: "silent",
     plugins: [labResolvePlugin],
+    absWorkingDir: ROOT,
   });
   const buildMs = Math.round(performance.now() - t0);
   const code = readFileSync(outfile, "utf8");
@@ -343,6 +457,7 @@ async function bundleArm(
   const packagesInGraph =
     arm === "singleton" ? n : cycles ? n : usedPackageIds.length;
   const markersUnusedTotal = packagesInGraph * unusedPerSvc;
+  const thirdPartyMarkersRetained = countThirdPartyMarkers(code);
 
   return {
     outfile,
@@ -352,6 +467,7 @@ async function bundleArm(
       markersUsedPresent,
       markersUnusedRetained,
       markersUnusedTotal,
+      thirdPartyMarkersRetained,
     },
   };
 }
@@ -402,6 +518,166 @@ const unusedRemovedPct =
         ).toFixed(1),
       );
 
+const fleetNaive =
+  benchCase === "fleet" && (fleetMode === "naive" || fleetMode === "both")
+    ? scaleFleetMetrics(
+        {
+          singletonBytes: singleton.metrics.bytes,
+          esmBytes: esm.metrics.bytes,
+          bytesSaved: bytesSavedAbs,
+        },
+        consumers,
+      )
+    : null;
+
+async function bundleFleetShared(
+  arm: "singleton" | "esm",
+): Promise<{ bytes: number; buildMs: number; chunkCount: number }> {
+  const fleetDir = join(OUT_DIR, `fleet-shared-${arm}`);
+  const entriesDir = join(FIXTURE_GEN, `fleet-entries-${arm}`);
+  rmSync(fleetDir, { recursive: true, force: true });
+  rmSync(entriesDir, { recursive: true, force: true });
+  mkdirSync(entriesDir, { recursive: true });
+  mkdirSync(fleetDir, { recursive: true });
+
+  const entryPoints: string[] = [];
+  for (let i = 0; i < consumers; i++) {
+    const path = join(entriesDir, `consumer-${i}.ts`);
+    const src =
+      arm === "esm"
+        ? `import { used } from "${pkgPrefix.esm}-0";\nexport const result_${i} = used();\n`
+        : `import { registerPublicServices } from "${pkgPrefix.register}";
+import { Svc0Service } from "${pkgPrefix.singleton}-0";
+registerPublicServices({ baseUrl: "http://lab.invalid" });
+export const result_${i} = Svc0Service.used();
+`;
+    writeFileSync(path, src);
+    entryPoints.push(path);
+  }
+
+  const t0 = performance.now();
+  await esbuild.build({
+    entryPoints,
+    bundle: true,
+    outdir: fleetDir,
+    format: "esm",
+    splitting: true,
+    platform: "neutral",
+    target: "es2022",
+    mainFields: ["module", "main"],
+    conditions: ["import", "module", "default"],
+    write: true,
+    logLevel: "silent",
+    plugins: [labResolvePlugin],
+    absWorkingDir: ROOT,
+  });
+  const buildMs = Math.round(performance.now() - t0);
+  const files = readdirSync(fleetDir).filter((f) => f.endsWith(".js"));
+  const lengths = files.map((f) =>
+    Buffer.byteLength(readFileSync(join(fleetDir, f), "utf8"), "utf8"),
+  );
+  return {
+    bytes: sumOutputBytes(lengths),
+    buildMs,
+    chunkCount: files.length,
+  };
+}
+
+const fleetShared =
+  benchCase === "fleet" && (fleetMode === "shared" || fleetMode === "both")
+    ? {
+        singleton: await bundleFleetShared("singleton"),
+        esm: await bundleFleetShared("esm"),
+      }
+    : null;
+
+const fleetSharedTotals =
+  fleetShared != null
+    ? (() => {
+        const singletonBytes = fleetShared.singleton.bytes;
+        const esmBytes = fleetShared.esm.bytes;
+        const bytesSaved = Math.max(0, singletonBytes - esmBytes);
+        const bytesSavedPct =
+          singletonBytes === 0
+            ? 0
+            : Number(((bytesSaved / singletonBytes) * 100).toFixed(1));
+        const singletonVsEsmFactor =
+          esmBytes === 0
+            ? 0
+            : Number((singletonBytes / esmBytes).toFixed(1));
+        return {
+          consumers,
+          singletonBytes,
+          esmBytes,
+          bytesSaved,
+          bytesSavedPct,
+          singletonVsEsmFactor,
+          singletonChunkCount: fleetShared.singleton.chunkCount,
+          esmChunkCount: fleetShared.esm.chunkCount,
+          singletonBuildMs: fleetShared.singleton.buildMs,
+          esmBuildMs: fleetShared.esm.buildMs,
+        };
+      })()
+    : null;
+
+/** Primary fleet totals for Quick Facts: prefer naive (deploy-per-app story). */
+const fleet = fleetNaive ?? fleetSharedTotals;
+const fleetSingletonSize = fleet ? byteParts(fleet.singletonBytes) : null;
+const fleetEsmSize = fleet ? byteParts(fleet.esmBytes) : null;
+const fleetSavedSize = fleet ? byteParts(fleet.bytesSaved) : null;
+const sharedVsNaivePct =
+  fleetNaive && fleetSharedTotals
+    ? sharingSavingsPct(
+        fleetNaive.singletonBytes,
+        fleetSharedTotals.singletonBytes,
+      )
+    : null;
+
+const expectedTpSingleton = thirdParty
+  ? 1 + tpExtraCount(thirdParty)
+  : 0;
+const expectedTpEsm = thirdParty ? 1 : 0; // shared core only
+
+function caseNote(): string {
+  if (benchCase === "thirdparty" && thirdParty) {
+    if (thirdParty.mode === "real") {
+      return (
+        `Third-party ballast (real pinned npm): every domain package side-effect-imports @lab/3p-core → graphql; ` +
+        `the singleton register also imports ${tpExtraCount(thirdParty)} unused extras ` +
+        `(dataloader / graphql-tag / uuid wrappers). Shared core is paid on both arms; unused extras stay singleton-only. ` +
+        `Versions pinned in package.json/lockfile for CI reproducibility.`
+      );
+    }
+    return (
+      `Third-party ballast (stubs, not real npm): every domain package side-effect-imports @lab/3p-core; ` +
+      `the singleton register also imports ${tpExtraCount(thirdParty)} unused @lab/3p-extra-* modules ` +
+      `(~${thirdParty.bytesPerPackage} B ballast each). Shared core is paid on both arms; unused extras stay singleton-only. ` +
+      `Use --3p=real for pinned graphql-stack npm weight.`
+    );
+  }
+  if (benchCase === "fleet" && fleet) {
+    const sharedBit =
+      fleetSharedTotals != null
+        ? ` Also measured: one esbuild multi-entry (splitting) across M entries so shared modules are not naively ×M` +
+          (sharedVsNaivePct != null
+            ? ` (singleton shared saves ${sharedVsNaivePct}% vs naive ×M).`
+            : ".")
+        : "";
+    return (
+      `Multi-consumer / non-GraphQL framing: ${consumers} identical frontend apps (or services). ` +
+      (fleetNaive
+        ? `Naive fleet totals = per-consumer × M (each app pays the graph again).`
+        : `Shared multi-entry totals only (--fleet-mode=shared).`) +
+      sharedBit +
+      ` Story is React/SDK consumers, not GraphQL resolvers.`
+    );
+  }
+  if (multiCall) {
+    return `App binds ${callSites} of ${surfaceFns} surface functions across ${usedPackageIds.length} packages. Both arms call the same ${callSites} sites; singleton still registers all ${n} packages${cycles ? " (cycles may still drag the full ring into ESM)" : ""}.`;
+  }
+  return `ESM call sites: 1 (import { used } from svc-0 only). Surface still ${surfaceFns} fns across ${n} packages; --fns only grows what can be shaken, not what ESM calls.`;
+}
+
 const report = {
   version: 1 as const,
   timestamp: new Date().toISOString(),
@@ -413,12 +689,12 @@ const report = {
   usedPackageIds,
   seed,
   surfaceFns,
+  consumers: benchCase === "fleet" ? consumers : 1,
+  fleetMode: benchCase === "fleet" ? fleetMode : undefined,
+  thirdParty,
   host: "esbuild" as const,
   mode,
-  note:
-    multiCall
-      ? `App binds ${callSites} of ${surfaceFns} surface functions across ${usedPackageIds.length} packages. Both arms call the same ${callSites} sites; singleton still registers all ${n} packages${cycles ? " (cycles may still drag the full ring into ESM)" : ""}.`
-      : `ESM call sites: 1 (import { used } from svc-0 only). Surface still ${surfaceFns} fns across ${n} packages; --fns only grows what can be shaken, not what ESM calls.`,
+  note: caseNote(),
   arms: {
     singleton: {
       ...singleton.metrics,
@@ -443,12 +719,117 @@ const report = {
     /** % of singleton unused markers dropped by ESM. */
     unusedRemovedPct,
   },
+  fleet: fleet
+    ? {
+        ...fleet,
+        mode: fleetMode,
+        singletonSize: fleetSingletonSize,
+        esmSize: fleetEsmSize,
+        sizeSaved: fleetSavedSize,
+        naive: fleetNaive
+          ? {
+              ...fleetNaive,
+              singletonSize: byteParts(fleetNaive.singletonBytes),
+              esmSize: byteParts(fleetNaive.esmBytes),
+              sizeSaved: byteParts(fleetNaive.bytesSaved),
+            }
+          : undefined,
+        shared: fleetSharedTotals
+          ? {
+              ...fleetSharedTotals,
+              singletonSize: byteParts(fleetSharedTotals.singletonBytes),
+              esmSize: byteParts(fleetSharedTotals.esmBytes),
+              sizeSaved: byteParts(fleetSharedTotals.bytesSaved),
+            }
+          : undefined,
+        sharingSavingsPct: sharedVsNaivePct ?? undefined,
+      }
+    : undefined,
+  methodologyLimits:
+    benchCase === "thirdparty"
+      ? thirdParty?.mode === "real"
+        ? "Real npm path pins graphql + dataloader + graphql-tag + uuid. esbuild bundles their reachable graphs; CJS interop and peer trees still differ from production Workers installs. Stub path remains default for byte-floor CI."
+        : "3p packages are generated stubs with fixed ballast + side-effect touches. They approximate unused SDK weight. Pass --3p=real for pinned npm graphql-stack weight."
+      : benchCase === "fleet"
+        ? "Naive fleet totals multiply one measured consumer graph by M. Shared mode bundles M esbuild entries with code-splitting so common modules are counted once. Ignores CDN caches and per-app bind differences. Not a Workers isolate boot."
+        : undefined,
 };
 
 const jsonPath = join(DOCS_LAB, `${reportBase}.json`);
 const mdPath = join(DOCS_LAB, `${reportBase}.md`);
 
 writeFileSync(jsonPath, JSON.stringify(report, null, 2) + "\n");
+
+const tpSection =
+  thirdParty != null
+    ? `
+## Third-party (${thirdParty.mode})
+
+| | Count | ${thirdParty.mode === "stub" ? "Bytes/pkg (ballast)" : "Mode"} | Markers in singleton | Markers in ESM |
+|--|------:|--------------------:|---------------------:|---------------:|
+| Config | ${thirdParty.count} | ${thirdParty.mode === "stub" ? thirdParty.bytesPerPackage.toLocaleString("en-US") : "real npm"} | ${singleton.metrics.thirdPartyMarkersRetained} | ${esm.metrics.thirdPartyMarkersRetained} |
+
+- Shared core marker: \`${thirdParty.mode === "real" ? "LAB_3P_REAL_CORE" : TP_CORE_MARKER}\` (both arms when any domain pkg is imported)
+- Unused extras: ${
+        thirdParty.mode === "real"
+          ? Array.from(
+              { length: tpExtraCount(thirdParty) },
+              (_, i) => `\`LAB_3P_REAL_EXTRA_${i}\``,
+            ).join(", ") || "(none)"
+          : Array.from(
+              { length: tpExtraCount(thirdParty) },
+              (_, i) => `\`${tpExtraMarker(i)}\``,
+            ).join(", ") || "(none)"
+      } (singleton register only)
+`
+    : "";
+
+const fleetSharedSize = fleetSharedTotals
+  ? {
+      singleton: byteParts(fleetSharedTotals.singletonBytes),
+      esm: byteParts(fleetSharedTotals.esmBytes),
+      saved: byteParts(fleetSharedTotals.bytesSaved),
+    }
+  : null;
+
+const fleetSection =
+  fleet && fleetSingletonSize && fleetEsmSize && fleetSavedSize
+    ? `
+## Fleet (×${consumers} consumers, mode=${fleetMode})
+
+${
+  fleetNaive
+    ? `| | Per consumer | Naive ×${consumers} |
+|--|-------------:|--------------------------:|
+| Singleton | ${singletonSize.detail} | ${byteParts(fleetNaive.singletonBytes).detail} |
+| ESM | ${esmSize.detail} | ${byteParts(fleetNaive.esmBytes).detail} |
+| Saved | ${savedSize.detail} (${bytesSavedPct}%) | ${byteParts(fleetNaive.bytesSaved).detail} (${fleetNaive.bytesSavedPct}%) |
+`
+    : ""
+}${
+  fleetSharedSize
+    ? `
+### Shared multi-entry (esbuild splitting)
+
+| | Multi-entry total | Chunks |
+|--|------------------:|-------:|
+| Singleton | ${fleetSharedSize.singleton.detail} | ${fleetSharedTotals!.singletonChunkCount} |
+| ESM | ${fleetSharedSize.esm.detail} | ${fleetSharedTotals!.esmChunkCount} |
+| Saved | ${fleetSharedSize.saved.detail} (${fleetSharedTotals!.bytesSavedPct}%) | |
+${sharedVsNaivePct != null ? `\nNaive→shared singleton savings: **${sharedVsNaivePct}%** (shared modules counted once).\n` : ""}`
+    : ""
+}
+`
+    : "";
+
+const whyBlock =
+  benchCase === "fleet"
+    ? `Each of ${consumers} consumers that imports the registry/SDK barrel pays the full first-party graph again under naive ×M. Selective ESM keeps per-app cost near the call sites you bind. Multi-entry shared mode shows how much a monorepo/shared-chunk build recovers for the singleton arm — ESM was already near the call-site floor.`
+    : benchCase === "thirdparty"
+      ? thirdParty?.mode === "real"
+        ? `Shared graphql (real core) is paid either way once a domain package is imported. The registry still ships unused SDK extras (dataloader / graphql-tag / uuid) plus every first-party package. Absolute bytes include real npm graphs; the packaging gap remains the unused-extra + first-party registry choice.`
+        : `Shared third-party runtime (stub core) is paid either way. The registry still ships unused 3p extras plus every first-party package. Pass --3p=real for pinned npm graphs; the first-party + unused-SDK gap remains the packaging choice.`
+      : `A singleton registry does not just import all ${n} packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~${callSites} call sites (${callSiteCoveragePct}% of the surface). Brutal when many consumers share the registry, or GraphQL sits on ${n}+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.`;
 
 const md = `# Scale bench ${benchCase}
 
@@ -458,18 +839,20 @@ const md = `# Scale bench ${benchCase}
 - **Fns/svc:** ${fns}
 - **Surface:** ${surfaceFns} functions (${n} × ${fns})
 - **Call sites (both arms):** ${callSites}${multiCall ? `: packages [${usedPackageIds.join(", ")}]` : ": ESM imports only \`used\` from svc-0"}
+- **Consumers:** ${benchCase === "fleet" ? consumers : 1}${benchCase === "fleet" ? ` (fleet-mode=${fleetMode})` : ""}
 - **Cycles:** ${cycles}
 - **Host:** esbuild
-- **Mode:** ${mode}
+- **Mode:** ${mode}${thirdParty ? `\n- **3p:** ${thirdParty.mode} (${thirdParty.count} pkgs)` : ""}
 
 ${report.note}
 
+${report.methodologyLimits ? `> **Methodology limits:** ${report.methodologyLimits}\n` : ""}
 ## Results
 
-| Arm | Size | Build (ms) | Used markers | Unused retained |
-|-----|------|----------:|-------------:|----------------:|
-| Singleton | ${singletonSize.detail} | ${singleton.metrics.buildMs} | ${singleton.metrics.markersUsedPresent} | ${singleton.metrics.markersUnusedRetained} |
-| ESM | ${esmSize.detail} | ${esm.metrics.buildMs} | ${esm.metrics.markersUsedPresent} | ${esm.metrics.markersUnusedRetained} |
+| Arm | Size | Build (ms) | Used markers | Unused retained | 3p markers |
+|-----|------|----------:|-------------:|----------------:|-----------:|
+| Singleton | ${singletonSize.detail} | ${singleton.metrics.buildMs} | ${singleton.metrics.markersUsedPresent} | ${singleton.metrics.markersUnusedRetained} | ${singleton.metrics.thirdPartyMarkersRetained} |
+| ESM | ${esmSize.detail} | ${esm.metrics.buildMs} | ${esm.metrics.markersUsedPresent} | ${esm.metrics.markersUnusedRetained} | ${esm.metrics.thirdPartyMarkersRetained} |
 
 ## Benefit (percentage comparison)
 
@@ -481,10 +864,10 @@ ${report.note}
 | Singleton / ESM size | ${singletonVsEsmFactor}× |
 | Call-site coverage of surface | ${callSiteCoveragePct}% (${callSites}/${surfaceFns}) |
 | Unused markers removed | ${unusedRemovedPct}% (Δ ${unusedMarkersDelta}) |
-
+${tpSection}${fleetSection}
 ## Why this matters
 
-A singleton registry does not just import all ${n} packages: it pulls every function inside them (cycles drag more). That graph does not tree-shake. ESM pays only for ~${callSites} call sites (${callSiteCoveragePct}% of the surface). Brutal when many consumers share the registry, or GraphQL sits on ${n}+ packages but only wires some resolvers. Cold start and deploy size follow the module graph, not the resolvers you actually registered.
+${whyBlock}
 
 ## Commands
 
@@ -494,6 +877,10 @@ bun run lab:bench -- --n=100 --used=200
 bun run lab:bench:wide -- --n=100 --used=300
 bun run lab:bench:cycles -- --n=100 --used=300
 bun run lab:bench:partial -- --n=100 --used=500
+bun run lab:bench:thirdparty -- --n=100
+bun run lab:bench:thirdparty:real -- --n=100
+bun run lab:bench:fleet -- --n=50 --consumers=100
+bun run lab:bench:coldstart
 \`\`\`
 `;
 
@@ -505,6 +892,23 @@ const bar = (pct: number) => {
   return "█".repeat(filled) + "░".repeat(w - filled);
 };
 
+const fleetLog =
+  fleet && fleetSavedSize
+    ? `
+  FLEET ×${consumers}  mode=${fleetMode}
+${
+  fleetNaive
+    ? `  naive×M     singleton ${formatBytesDetail(fleetNaive.singletonBytes)}  esm ${formatBytesDetail(fleetNaive.esmBytes)}  saved ${fleetNaive.bytesSavedPct}%
+`
+    : ""
+}${
+  fleetSharedTotals
+    ? `  shared      singleton ${formatBytesDetail(fleetSharedTotals.singletonBytes)}  esm ${formatBytesDetail(fleetSharedTotals.esmBytes)}  saved ${fleetSharedTotals.bytesSavedPct}%
+${sharedVsNaivePct != null ? `  share vs ×M  ${sharedVsNaivePct}% less singleton than naive\n` : ""}`
+    : ""
+}`
+    : "";
+
 console.log(`
 ╔══════════════════════════════════════════╗
 ║     SCALE BENCH  singleton vs ESM        ║
@@ -512,12 +916,13 @@ console.log(`
   case=${benchCase}  N=${n}  fns=${fns}  cycles=${cycles}
   callSites=${callSites}/${surfaceFns} (${callSiteCoveragePct}% of surface)
   packages=[${usedPackageIds.join(",")}]
+  consumers=${benchCase === "fleet" ? consumers : 1}${benchCase === "fleet" ? `  fleet-mode=${fleetMode}` : ""}
   host=esbuild  mode=${mode}
-
+${thirdParty ? `  3p=${thirdParty.mode}:${thirdParty.count}×${thirdParty.bytesPerPackage}B\n` : ""}
   SINGLETON  ${formatBytesDetail(singleton.metrics.bytes)}
-             unused×${singleton.metrics.markersUnusedRetained}  used×${singleton.metrics.markersUsedPresent}
+             unused×${singleton.metrics.markersUnusedRetained}  used×${singleton.metrics.markersUsedPresent}  3p×${singleton.metrics.thirdPartyMarkersRetained}
   ESM        ${formatBytesDetail(esm.metrics.bytes)}
-             unused×${esm.metrics.markersUnusedRetained}  used×${esm.metrics.markersUsedPresent}
+             unused×${esm.metrics.markersUnusedRetained}  used×${esm.metrics.markersUsedPresent}  3p×${esm.metrics.thirdPartyMarkersRetained}
 
   COMPARISON
   bytes saved     ${bytesSavedPct}%  (${formatBytesDetail(bytesSavedAbs)})
@@ -525,7 +930,7 @@ console.log(`
   singleton/ESM   ${singletonVsEsmFactor}× larger
   unused removed  ${unusedRemovedPct}%  (Δ ${unusedMarkersDelta})
   ${bar(bytesSavedPct)}
-
+${fleetLog}
   → docs/lab/${reportBase}.md
   → docs/lab/${reportBase}.json
 `);
@@ -543,13 +948,35 @@ const singletonMin =
 const singletonPollutes =
   singleton.metrics.markersUnusedRetained >= singletonMin;
 const esmSmaller = esm.metrics.bytes < singleton.metrics.bytes;
+const tpSingletonOk =
+  !thirdParty ||
+  singleton.metrics.thirdPartyMarkersRetained === expectedTpSingleton;
+const tpEsmOk =
+  !thirdParty || esm.metrics.thirdPartyMarkersRetained === expectedTpEsm;
+const fleetNaiveOk =
+  fleetNaive == null ||
+  (fleetNaive.singletonBytes === singleton.metrics.bytes * consumers &&
+    fleetNaive.esmBytes === esm.metrics.bytes * consumers);
+const fleetSharedOk =
+  fleetSharedTotals == null ||
+  (fleetSharedTotals.singletonBytes > 0 &&
+    fleetSharedTotals.esmBytes > 0 &&
+    fleetSharedTotals.esmBytes < fleetSharedTotals.singletonBytes &&
+    (fleetNaive == null ||
+      fleetSharedTotals.singletonBytes < fleetNaive.singletonBytes));
+const fleetOk =
+  benchCase !== "fleet" ||
+  (fleet != null && fleetNaiveOk && fleetSharedOk);
 
 if (
   !esmUnusedOk ||
   !esmUsedOk ||
   !singletonUsedOk ||
   !singletonPollutes ||
-  !esmSmaller
+  !esmSmaller ||
+  !tpSingletonOk ||
+  !tpEsmOk ||
+  !fleetOk
 ) {
   console.error("FAIL: expected ESM to drop unused markers and shrink vs singleton");
   console.error({
@@ -558,8 +985,15 @@ if (
     singletonUsedOk,
     singletonPollutes,
     esmSmaller,
+    tpSingletonOk,
+    tpEsmOk,
+    fleetOk,
+    fleetNaiveOk,
+    fleetSharedOk,
     expectedUsedMarkers,
     expectedBoundUnusedMarkers,
+    expectedTpSingleton,
+    expectedTpEsm,
     report,
   });
   process.exit(1);

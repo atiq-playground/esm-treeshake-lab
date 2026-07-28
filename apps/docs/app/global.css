@@ -101,3 +101,92 @@ body {
   font-family: var(--font-mono);
   color: var(--text-primary);
 }
+
+/* QUICK FACTS — operational pain strip */
+.lab-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lab-facts-compact {
+  gap: 0.75rem;
+}
+
+.lab-facts-grid {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--border-visible);
+}
+
+@media (min-width: 640px) {
+  .lab-facts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.lab-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-visible);
+}
+
+@media (min-width: 640px) {
+  .lab-fact:nth-child(odd) {
+    padding-right: 1.25rem;
+    border-right: 1px solid var(--border-visible);
+  }
+
+  .lab-fact:nth-child(even) {
+    padding-left: 1.25rem;
+  }
+}
+
+.lab-fact-headline,
+.lab-fact-headline-esm,
+.lab-fact-headline-singleton {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-display);
+}
+
+.lab-fact-headline-esm {
+  color: var(--success);
+}
+
+.lab-fact-headline-singleton {
+  color: var(--accent);
+}
+
+.lab-fact-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-disabled);
+}
+
+.lab-fact-badge-measured {
+  color: var(--success);
+}
+
+.lab-fact-badge-extrapolated {
+  color: var(--warning);
+}
+
+.lab-fact-badge-operator {
+  color: var(--text-secondary);
+}
+
+.lab-fact-caveat {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--text-disabled);
+}
