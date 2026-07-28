@@ -3,11 +3,12 @@
   "version": "0.6.3",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
-    "build": "next build",
+    "dev": "bun run highlight:packaging && next dev --port 3000",
+    "highlight:packaging": "bun ./scripts/generate-packaging-highlights.ts",
+    "build": "bun run highlight:packaging && next build",
     "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "bun run highlight:packaging && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "bun run highlight:packaging && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {

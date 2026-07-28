@@ -1,47 +1,15 @@
-import { getHighlighter } from "fumadocs-core/highlight";
 import {
-  PACKAGING_EXAMPLES,
-  type PackagingLangId,
-} from "@/lib/packaging-examples";
+  HIGHLIGHTED_PACKAGING_EXAMPLES,
+  type HighlightedPackagingExample,
+} from "@/lib/packaging-examples.highlighted";
 
-export type HighlightedPackagingExample = {
-  id: PackagingLangId;
-  label: string;
-  why: string;
-  badHtml: string;
-  goodHtml: string;
-};
+export type { HighlightedPackagingExample };
 
-const SHIKI_LANG: Record<PackagingLangId, string> = {
-  typescript: "typescript",
-  javascript: "javascript",
-};
-
-/** Server-only: highlight all packaging snippets once per request/build. */
-export async function highlightPackagingExamples(): Promise<
-  HighlightedPackagingExample[]
-> {
-  const highlighter = await getHighlighter("js", {
-    langs: ["typescript", "javascript"],
-    themes: ["github-light", "github-dark"],
-  });
-
-  return PACKAGING_EXAMPLES.map((ex) => {
-    const lang = SHIKI_LANG[ex.id];
-    const options = {
-      lang,
-      themes: {
-        light: "github-light" as const,
-        dark: "github-dark" as const,
-      },
-      defaultColor: false as const,
-    };
-    return {
-      id: ex.id,
-      label: ex.label,
-      why: ex.why,
-      badHtml: highlighter.codeToHtml(ex.bad, options),
-      goodHtml: highlighter.codeToHtml(ex.good, options),
-    };
-  });
+/**
+ * Precomputed at build time (see scripts/generate-packaging-highlights.ts).
+ * Runtime must not import fumadocs-core/highlight / shiki — Workers free tier
+ * is 3 MiB and the full Shiki bundle is ~10MB+ of grammars.
+ */
+export function getHighlightedPackagingExamples(): HighlightedPackagingExample[] {
+  return [...HIGHLIGHTED_PACKAGING_EXAMPLES];
 }
