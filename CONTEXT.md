@@ -5,8 +5,12 @@ A metrics lab comparing **singleton plugin** packaging vs **ESM selective import
 ## Language
 
 **Scale bench**:
-The esbuild harness that generates or uses smoke `@lab/*` stubs, bundles singleton vs ESM fixtures, and writes case reports under `docs/lab/` (`benchmark-latest.*` for UC1; `-wide` / `-cycles` / `-partial` siblings for variants).
+The esbuild harness that generates or uses smoke `@lab/*` stubs, bundles singleton vs ESM fixtures, and writes case reports under `docs/lab/` (`benchmark-latest.*` for UC1; `-wide` / `-cycles` / `-partial` / `-thirdparty` / `-fleet` siblings for variants).
 _Avoid_: treating the docs site as the bench host; in-browser Run-N
+
+**Third-party stubs / fleet**:
+`--case=thirdparty` generates deterministic `@lab/3p-*` ballast (shared core + unused extras), not real npm deps. `--case=fleet` multiplies one measured consumer graph by `--consumers=M` (non-GraphQL / multi-app story).
+_Avoid_: adding graphql/ORM to CI smoke; letting smoke overwrite UC1 `benchmark-latest.*` (smoke writes `tmp/` only)
 
 **Call sites vs surface**:
 `--fns` = functions *defined* per package (shakeable surface). **Call sites** = how many `used()` invocations the fixture actually performs. UC1–UC3: ESM call sites = **1**. UC4 `partial`: call sites = `--used=K` (default `⌊N/2⌋`) on both arms.

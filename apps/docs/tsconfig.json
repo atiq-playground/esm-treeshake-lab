@@ -38,9 +38,12 @@
     ".next/types/**/*.ts",
     ".source/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "../../docs/lab/benchmark-latest.json"
+    "../../docs/lab/benchmark-latest.json",
+    "../../docs/research/scale-bench-sweep.json"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

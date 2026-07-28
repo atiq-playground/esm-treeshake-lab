@@ -11,6 +11,8 @@ description: Registry pulls every function; ESM only pays for call sites
 
 Same API surface either way. Different bill.
 
+On the [home page](/): **boxes** are packages, **dots** are exports (● shipped, ○ shaken), **bags** are Worker bytes. Warm/red = load everything; cool/green = only what you use.
+
 ## Why that bill hurts
 
 | Pressure | What happens |
@@ -21,7 +23,9 @@ Same API surface either way. Different bill.
 | Many consumers | Each app that touches the registry pays the full graph again |
 | Façades (GraphQL, etc.) | Schema *could* reach 100+ packages; you still only wire some resolvers. Registry ships all of them anyway |
 
-Cold start, isolate size, and deploy bytes follow the module graph, not the resolvers you actually registered.
+Cold start, isolate size, and deploy bytes follow the module graph, not the resolvers you actually registered. The lab now measures Node cold import + RSS (`lab:bench:coldstart`) as a host-side proxy; Workers isolate boot is still out of scope.
+
+<QuickFacts compact />
 
 ## The two arms (this lab)
 
@@ -70,7 +74,9 @@ This is **not** “do you have 100 random npm dependencies?” It is a GraphQL (
 
 Landing benches: **~2/pkg** (lean), **~3/pkg** (fat/cycles), **~5/pkg** (many) — same K on both arms; singleton still registers all N.
 
-**Out of scope (important):** these stubs do **not** include `graphql`, DataLoader, ORMs, auth SDKs, or other third-party deps. Real services pull those too; they can grow the bundle far more. The numbers isolate the **first-party module graph** cost of “import everything so GraphQL *could* use it” versus “import what the schema actually binds.”
+**Out of scope for UC1–UC4 (important):** those stubs do **not** include real `graphql`, DataLoader, ORMs, or auth SDKs. Real services pull those too; they can grow the bundle far more. UC1–UC4 isolate the **first-party module graph** cost of “import everything so GraphQL *could* use it” versus “import what the schema actually binds.”
+
+**Extended datapoints (sibling reports):** `--case=thirdparty` adds deterministic stub `@lab/3p-*` ballast (shared core + unused extras) — sample N=100 / 4×32KB: **386 KB → 32.4 KB** (91.6% smaller). `--case=fleet` multiplies one consumer’s graph by `--consumers=M` — sample N=50 × 100 apps: **~12.56 MB → ~19.5 KB** (99.8%). Not real npm graphs; fleet is per-consumer × M, not a multi-entry bundle. Cited in Quick facts. See [Research](/docs/research).
 
 Large schemas are fine. A global registry of every domain package is not how the **module graph** should look.
 

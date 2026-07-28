@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-28T02:27:56.830Z",
+  "case": "thirdparty",
+  "n": 100,
+  "fns": 2,
+  "cycles": false,
+  "callSites": 1,
+  "usedPackageIds": [
+    0
+  ],
+  "seed": null,
+  "surfaceFns": 200,
+  "consumers": 1,
+  "thirdParty": {
+    "count": 4,
+    "bytesPerPackage": 32768,
+    "mode": "stub"
+  },
+  "host": "esbuild",
+  "mode": "generated",
+  "note": "Third-party ballast (stubs, not real npm): every domain package side-effect-imports @lab/3p-core; the singleton register also imports 3 unused @lab/3p-extra-* modules (~32768 B ballast each). Shared core is paid on both arms; unused extras stay singleton-only. Use --3p=real for pinned graphql-stack npm weight.",
+  "arms": {
+    "singleton": {
+      "bytes": 395274,
+      "buildMs": 49,
+      "markersUsedPresent": 100,
+      "markersUnusedRetained": 100,
+      "markersUnusedTotal": 100,
+      "thirdPartyMarkersRetained": 4,
+      "size": {
+        "bytes": 395274,
+        "kb": 386.01,
+        "mb": 0.377,
+        "gb": 0.000368,
+        "primary": "386 KB",
+        "detail": "395,274 B · 386 KB · 0.38 MB"
+      }
+    },
+    "esm": {
+      "bytes": 33191,
+      "buildMs": 3,
+      "markersUsedPresent": 1,
+      "markersUnusedRetained": 0,
+      "markersUnusedTotal": 1,
+      "thirdPartyMarkersRetained": 1,
+      "size": {
+        "bytes": 33191,
+        "kb": 32.413,
+        "mb": 0.0317,
+        "gb": 0.000031,
+        "primary": "32.4 KB",
+        "detail": "33,191 B · 32.4 KB · 0.03 MB"
+      }
+    }
+  },
+  "benefit": {
+    "bytesSavedPct": 91.6,
+    "bytesSaved": 362083,
+    "sizeSaved": {
+      "bytes": 362083,
+      "kb": 353.597,
+      "mb": 0.3453,
+      "gb": 0.000337,
+      "primary": "353.6 KB",
+      "detail": "362,083 B · 353.6 KB · 0.35 MB"
+    },
+    "unusedMarkersDelta": 100,
+    "esmOfSingletonPct": 8.4,
+    "singletonVsEsmFactor": 11.9,
+    "callSiteCoveragePct": 0.5,
+    "unusedRemovedPct": 100
+  },
+  "methodologyLimits": "3p packages are generated stubs with fixed ballast + side-effect touches. They approximate unused SDK weight. Pass --3p=real for pinned npm graphql-stack weight."
+}

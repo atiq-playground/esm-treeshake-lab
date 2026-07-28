@@ -103,18 +103,18 @@ describe("toUseCaseComparison", () => {
       "partial",
     ]);
     expect(summary.rows.map((r) => r.plainTitle)).toEqual([
-      "Lean domain modules",
-      "Fat domain modules",
-      "Cyclic domain graph",
+      "Thin module surface",
+      "Wide module surface",
+      "Circular imports",
       "Wires 500 resolvers",
     ]);
     expect(summary.rows[3]?.plainBlurb).toContain("~5 resolvers/package");
     expect(summary.rows[3]?.plainBlurb).toContain("1 fn ≈ 1 field");
     expect(summary.rows.map((r) => r.label)).toEqual([
-      "Lean",
-      "Fat",
-      "Cyclic",
-      "Many",
+      "Thin surface",
+      "Wide surface",
+      "Import cycles",
+      "Heavier bind",
     ]);
     expect(summary.savedPctRange).toEqual({ min: 12.8, max: 89.2 });
     expect(summary.largestSave.id).toBe("wide");

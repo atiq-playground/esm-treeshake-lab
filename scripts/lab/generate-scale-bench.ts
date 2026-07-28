@@ -6,9 +6,16 @@
  *   bun run scripts/lab/generate-scale-bench.ts --n=100 --fns=20
  *   bun run scripts/lab/generate-scale-bench.ts --n=100 --fns=20 --cycles
  *   bun run scripts/lab/generate-scale-bench.ts --n=3 --smoke
+ *   bun run scripts/lab/generate-scale-bench.ts --n=100 --case=thirdparty
+ *   bun run scripts/lab/generate-scale-bench.ts --n=3 --case=thirdparty --3p-count=2 --3p-bytes=2048
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import {
+  parseThirdPartyConfig,
+  type ThirdPartyConfig,
+} from "./bench-metrics.ts";
+import { writeThirdPartyPackages } from "./third-party-stubs.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 
@@ -19,9 +26,40 @@ function argValue(flag: string): string | undefined {
 
 const smoke = process.argv.includes("--smoke");
 const cycles = process.argv.includes("--cycles");
+const want3p =
+  process.argv.includes("--3p") ||
+  argValue("--3p") != null ||
+  argValue("--case") === "thirdparty";
 const n = Number(argValue("--n") ?? (smoke ? "3" : "100"));
 const fns = Number(argValue("--fns") ?? "2");
-const caseName = argValue("--case") ?? (cycles ? "cycles" : fns > 2 ? "wide" : "baseline");
+const caseName =
+  argValue("--case") ??
+  (want3p ? "thirdparty" : cycles ? "cycles" : fns > 2 ? "wide" : "baseline");
+
+let thirdParty: ThirdPartyConfig | null = null;
+if (want3p) {
+  try {
+    const modeFlag = argValue("--3p");
+    thirdParty = parseThirdPartyConfig({
+      smoke,
+      mode:
+        modeFlag === "real" || modeFlag === "stub"
+          ? modeFlag
+          : undefined,
+      count:
+        argValue("--3p-count") != null
+          ? Number(argValue("--3p-count"))
+          : undefined,
+      bytesPerPackage:
+        argValue("--3p-bytes") != null
+          ? Number(argValue("--3p-bytes"))
+          : undefined,
+    });
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(2);
+  }
+}
 
 if (!Number.isFinite(n) || n < 1 || n > 10000) {
   console.error("Invalid --n (1..10000)");
@@ -31,8 +69,10 @@ if (!Number.isFinite(fns) || fns < 2 || fns > 200) {
   console.error("Invalid --fns (2..200)");
   process.exit(2);
 }
-if (smoke && (fns !== 2 || cycles)) {
-  console.error("Smoke packages are UC1 only (fns=2, no cycles)");
+if (smoke && (fns !== 2 || cycles || want3p)) {
+  console.error(
+    "Smoke packages are UC1 only (fns=2, no cycles, no --3p). Use --case=thirdparty --n=3 for 3p stubs.",
+  );
   process.exit(2);
 }
 
@@ -56,6 +96,7 @@ function singletonSrc(
   totalFns: number,
   withCycles: boolean,
   totalN: number,
+  core3pImport = "",
 ): string {
   const used = `${markerPrefix}_SVC_${i}_USED`;
   const key = `LabSingletonSvc${i}`;
@@ -87,7 +128,7 @@ function singletonSrc(
     : "";
   const cycleExport = withCycles ? `\nexport const cycleId = ${i};\n` : "";
 
-  return `${cycleImport}${cycleTouch}import {
+  return `${core3pImport}${cycleImport}${cycleTouch}import {
   getRoot,
   registerPublicService,
   type LabSingletonConfig,
@@ -129,6 +170,7 @@ function esmSrc(
   totalFns: number,
   withCycles: boolean,
   totalN: number,
+  core3pImport = "",
 ): string {
   const usedM = `${markerPrefix}_SVC_${i}_USED`;
   const next = (i + 1) % totalN;
@@ -168,7 +210,7 @@ export function ${name}(): typeof ${payload} {
     : "";
   const cycleExport = withCycles ? `\nexport const cycleId = ${i};\n` : "";
 
-  return `${cycleImport}${cycleTouch}${unusedBlocks}
+  return `${core3pImport}${cycleImport}${cycleTouch}${unusedBlocks}
 export function used(): string {
   return "${usedM}";
 }
@@ -251,18 +293,28 @@ export { Svc0Service } from "@lab/smoke-singleton-svc-0";
 const genRoot = join(ROOT, "packages/lab/generated");
 rmSync(genRoot, { recursive: true, force: true });
 
+let core3pImport = "";
+let extra3pImports = "";
+let tpMarkers: string[] = [];
+if (thirdParty) {
+  const tp = writeThirdPartyPackages(genRoot, thirdParty);
+  core3pImport = tp.coreImport;
+  extra3pImports = tp.extraImports;
+  tpMarkers = tp.markers;
+}
+
 for (let i = 0; i < n; i++) {
   const sName = `@lab/singleton-svc-${i}`;
   const eName = `@lab/esm-svc-${i}`;
   writePkg(
     join(genRoot, "singleton", `svc-${i}`),
     sName,
-    singletonSrc(i, singletonMarker, sName, fns, cycles, n),
+    singletonSrc(i, singletonMarker, sName, fns, cycles, n, core3pImport),
   );
   writePkg(
     join(genRoot, "esm", `svc-${i}`),
     eName,
-    esmSrc(i, esmMarker, eName, fns, cycles, n),
+    esmSrc(i, esmMarker, eName, fns, cycles, n, core3pImport),
   );
 }
 
@@ -288,7 +340,7 @@ writeFileSync(
 );
 writeFileSync(
   join(registerDir, "src/index.ts"),
-  `${imports}
+  `${extra3pImports}${imports}
 export { registerPublicServices } from "@lab/singleton-services";
 export { Svc0Service } from "@lab/singleton-svc-0";
 `,
@@ -302,6 +354,8 @@ writeFileSync(
       fns,
       cycles,
       case: caseName,
+      thirdParty,
+      thirdPartyMarkers: tpMarkers,
       generatedAt: new Date().toISOString(),
     },
     null,
@@ -314,5 +368,5 @@ writeFileSync(
 );
 
 console.log(
-  `Wrote generated packages n=${n} fns=${fns} cycles=${cycles} case=${caseName} under packages/lab/generated`,
+  `Wrote generated packages n=${n} fns=${fns} cycles=${cycles} case=${caseName}${thirdParty ? ` 3p=${thirdParty.mode}:${thirdParty.count}×${thirdParty.bytesPerPackage}B` : ""} under packages/lab/generated`,
 );

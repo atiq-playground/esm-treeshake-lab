@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "timestamp": "2026-07-28T02:47:21.322Z",
+  "case": "coldstart",
+  "n": 50,
+  "host": "node",
+  "mode": "generated",
+  "note": "Node cold import: wall time to first module evaluation + process RSS/heap after import. esbuild finishes before the clock; each arm times import of one already-bundled .mjs in a fresh child process. Workers/workerd isolate boot is not measured here (too heavy/noisy for the lab).",
+  "methodologyLimits": "RSS includes ~45 MB Node baseline + V8 heap for the bundled graph — not a Cloudflare Worker isolate. Published latest uses research N=50 (smoke --n=3 is CI-local only and does not overwrite this artifact). Import ms is one-shot (no warmup average). Order-of-magnitude evidence that retained JS costs parse/memory, not a production SLO.",
+  "arms": {
+    "singleton": {
+      "bytes": 131678,
+      "buildMs": 34,
+      "importMs": 1.9,
+      "rssBytes": 48283648,
+      "heapUsedBytes": 4541664,
+      "size": {
+        "bytes": 131678,
+        "kb": 128.592,
+        "mb": 0.1256,
+        "gb": 0.000123,
+        "primary": "128.6 KB",
+        "detail": "131,678 B · 128.6 KB · 0.13 MB"
+      },
+      "rssSize": {
+        "bytes": 48283648,
+        "kb": 47152,
+        "mb": 46.0469,
+        "gb": 0.044968,
+        "primary": "46.05 MB",
+        "detail": "48,283,648 B · 47152 KB · 46.05 MB · 0.04 GB"
+      },
+      "heapSize": {
+        "bytes": 4541664,
+        "kb": 4435.219,
+        "mb": 4.3313,
+        "gb": 0.00423,
+        "primary": "4.33 MB",
+        "detail": "4,541,664 B · 4435.2 KB · 4.33 MB"
+      }
+    },
+    "esm": {
+      "bytes": 200,
+      "buildMs": 3,
+      "importMs": 0.34,
+      "rssBytes": 47235072,
+      "heapUsedBytes": 4207976,
+      "size": {
+        "bytes": 200,
+        "kb": 0.195,
+        "mb": 0.0002,
+        "gb": 0,
+        "primary": "200 B",
+        "detail": "200 B"
+      },
+      "rssSize": {
+        "bytes": 47235072,
+        "kb": 46128,
+        "mb": 45.0469,
+        "gb": 0.043991,
+        "primary": "45.05 MB",
+        "detail": "47,235,072 B · 46128 KB · 45.05 MB · 0.04 GB"
+      },
+      "heapSize": {
+        "bytes": 4207976,
+        "kb": 4109.352,
+        "mb": 4.013,
+        "gb": 0.003919,
+        "primary": "4.01 MB",
+        "detail": "4,207,976 B · 4109.4 KB · 4.01 MB"
+      }
+    }
+  },
+  "benefit": {
+    "importMsSaved": 1.56,
+    "importMsSavedPct": 82.1,
+    "rssBytesSaved": 1048576,
+    "rssBytesSavedPct": 2.2,
+    "rssSizeSaved": {
+      "bytes": 1048576,
+      "kb": 1024,
+      "mb": 1,
+      "gb": 0.000977,
+      "primary": "1 MB",
+      "detail": "1,048,576 B · 1024 KB · 1 MB"
+    }
+  }
+}

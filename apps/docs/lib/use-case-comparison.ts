@@ -27,37 +27,37 @@ export const USE_CASE_ORDER: readonly UseCaseMeta[] = [
     id: "baseline",
     uc: "UC1",
     name: "Baseline",
-    plainTitle: "Lean domain modules",
+    plainTitle: "Thin module surface",
     plainBlurb:
       "100 packages, thin surface (~2 fns each). Schema still binds ~2 resolvers per package.",
-    axisLabel: "Lean",
+    axisLabel: "Thin surface",
   },
   {
     id: "wide",
     uc: "UC2",
     name: "Wide",
-    plainTitle: "Fat domain modules",
+    plainTitle: "Wide module surface",
     plainBlurb:
       "100 packages × ~20 exports each. Schema binds ~3 resolvers/package; registry ships the other ~17.",
-    axisLabel: "Fat",
+    axisLabel: "Wide surface",
   },
   {
     id: "cycles",
     uc: "UC3",
     name: "Cycles",
-    plainTitle: "Cyclic domain graph",
+    plainTitle: "Circular imports",
     plainBlurb:
       "Same ~3 resolvers/package, but packages ring-link — the cycle can drag neighbors you never call.",
-    axisLabel: "Cyclic",
+    axisLabel: "Import cycles",
   },
   {
     id: "partial",
     uc: "UC4",
     name: "Partial",
-    plainTitle: "Many resolvers",
+    plainTitle: "Heavier schema bind",
     plainBlurb:
       "Heavier schema: ~5 resolvers per package. Still far from the full ~20-fn surface each package defines.",
-    axisLabel: "Many",
+    axisLabel: "Heavier bind",
   },
 ] as const;
 
@@ -157,14 +157,14 @@ function plainCopy(
   if (meta.id === "baseline") {
     return {
       plainTitle: meta.plainTitle,
-      plainBlurb: `${n} lean packages (~${fns} fns each). Schema binds ~${perPkg} resolvers/package (${used} total); registry still side-effect-imports all ${n}.`,
+      plainBlurb: `${n} packages with a thin surface (~${fns} fns each). Schema binds ~${perPkg} resolvers/package (${used} total); registry still side-effect-imports all ${n}.`,
     };
   }
 
   if (meta.id === "wide") {
     return {
       plainTitle: meta.plainTitle,
-      plainBlurb: `${n} fat packages (~${fns} exports each). Schema binds ~${perPkg}/package; singleton still ships the other ~${Math.max(0, fns - perPkg)} unused exports per package.`,
+      plainBlurb: `${n} packages with a wide surface (~${fns} exports each). Schema binds ~${perPkg}/package; singleton still ships the other ~${Math.max(0, fns - perPkg)} unused exports per package.`,
     };
   }
 
@@ -190,6 +190,11 @@ export function toUseCaseComparison(
     const bytesSaved =
       report.benefit.bytesSaved ??
       Math.max(0, singletonBytes - esmBytes);
+    const bytesSavedPct =
+      report.benefit.bytesSavedPct ??
+      (singletonBytes === 0
+        ? 0
+        : Number(((bytesSaved / singletonBytes) * 100).toFixed(1)));
     const singletonSize =
       report.arms.singleton.size ?? byteParts(singletonBytes);
     const esmSize = report.arms.esm.size ?? byteParts(esmBytes);
@@ -215,7 +220,7 @@ export function toUseCaseComparison(
       esmKb: Math.max(esmBytes / 1024, 0.001),
       singletonPrimary: singletonSize.primary,
       esmPrimary: esmSize.primary,
-      bytesSavedPct: report.benefit.bytesSavedPct,
+      bytesSavedPct,
       bytesSaved,
       sizeSavedPrimary: savedSize.primary,
       singletonVsEsmFactor: report.benefit.singletonVsEsmFactor,
