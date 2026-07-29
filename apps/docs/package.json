@@ -1,6 +1,6 @@
 {
   "name": "@apps/docs",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "private": true,
   "scripts": {
     "dev": "bun run highlight:packaging && next dev --port 3000",
