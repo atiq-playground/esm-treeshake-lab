@@ -27,6 +27,8 @@ Artifacts: [thirdparty](https://github.com/atiq-playground/esm-treeshake-lab/blo
 
 On-demand proof for a GraphQL-shaped graph (`N=100`, `--fns=20`, `--used=1000`, cycles + real npm 3p): cold + warm pipeline timings and Node request-time load. Homepage stays on UC1 — this section only.
 
+Cold pipeline wipes `node_modules` + the Bun install cache before the timed `bun install` (CI / Docker / fresh-clone proxy). Warm leaves caches hot. Packaging bytes stay the same across cache modes — compare fair pairs within one mode. Not Lambda/Workers isolate boot.
+
 Trigger: Actions → **Lab realistic bench** (`workflow_dispatch`). Report: [benchmark-realistic-latest.md](https://github.com/atiq-playground/esm-treeshake-lab/blob/main/docs/lab/benchmark-realistic-latest.md). Map: [#35](https://github.com/atiq-playground/esm-treeshake-lab/issues/35).
 
 <RealisticBenchSummary />
