@@ -1,6 +1,6 @@
 # Scale bench realistic
 
-- **When:** 2026-07-28T19:12:24.572Z
+- **When:** 2026-07-29T03:27:18.032Z
 - **Case:** realistic
 - **N:** 100
 - **Fns/svc:** 20
@@ -14,14 +14,14 @@
 
 Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface functions (~10 call sites/pkg) across 100 packages. Both arms share the same call sites (no --seed shuffle). Singleton still registers all 100 packages; cycles may drag the full ring into ESM. Real npm core (graphql) is paid on both arms; unused SDK extras stay singleton-only.
 
-> **Methodology limits:** Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.
+> **Methodology limits:** Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Cold wipes node_modules + the Bun install cache before the timed bun install; warm leaves them in place. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.
 
 ## Results
 
 | Arm | Size | Build (ms) | Used markers | Unused retained | 3p markers |
 |-----|------|----------:|-------------:|----------------:|-----------:|
-| Singleton | 4,368,709 B · 4266.3 KB · 4.17 MB | 154 | 100 | 1900 | 4 |
-| ESM | 2,033,506 B · 1985.8 KB · 1.94 MB | 103 | 100 | 900 | 1 |
+| Singleton | 4,368,709 B · 4266.3 KB · 4.17 MB | 168 | 100 | 1900 | 4 |
+| ESM | 2,033,506 B · 1985.8 KB · 1.94 MB | 94 | 100 | 900 | 1 |
 
 ## Benefit (percentage comparison)
 
@@ -45,33 +45,33 @@ Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface fun
 
 ## Pipeline (fair pairs; never average warm/cold)
 
-> Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.
+> Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Cold wipes node_modules + the Bun install cache before the timed bun install; warm leaves them in place. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.
 
 
 ### Cold
 
 | Arm | generate (ms) | install (ms) | bundle (ms) | artifact bytes | upload (ms) | pipeline total (ms) |
 |-----|-------------:|-------------:|-----------:|---------------:|------------:|--------------------:|
-| Singleton | 98 | 86 | 208 | 4,368,709 | — | 392 |
-| ESM | 98 | 86 | 112 | 2,033,506 | — | 296 |
+| Singleton | 61 | 4015 | 147 | 4,368,709 | — | 4223 |
+| ESM | 61 | 4015 | 82 | 2,033,506 | — | 4158 |
 
 
 ### Warm
 
 | Arm | generate (ms) | install (ms) | bundle (ms) | artifact bytes | upload (ms) | pipeline total (ms) |
 |-----|-------------:|-------------:|-----------:|---------------:|------------:|--------------------:|
-| Singleton | 131 | 86 | 154 | 4,368,709 | — | 371 |
-| ESM | 131 | 86 | 103 | 2,033,506 | — | 320 |
+| Singleton | 71 | 70 | 168 | 4,368,709 | — | 309 |
+| ESM | 71 | 70 | 94 | 2,033,506 | — | 235 |
 
 
 ## Proof
 
 | | |
 |--|--|
-| Timestamp | 2026-07-28T19:12:24.572Z |
+| Timestamp | 2026-07-29T03:27:18.032Z |
 | Runner | github-actions |
-| GitHub run | https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30390892661 |
-| Run id | 30390892661 |
+| GitHub run | https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30419600866 |
+| Run id | 30419600866 |
 
 ## Request-time (Node HTTP)
 
@@ -79,8 +79,8 @@ Realistic GraphQL-shaped: cycles + --3p=real; app binds 1000 of 2000 surface fun
 
 | Arm | p50 (ms) | p95 (ms) | CPU user (ms) | CPU system (ms) | RSS | Heap |
 |-----|---------:|---------:|--------------:|----------------:|----:|-----:|
-| Singleton | 1.7 | 1.99 | 870.85 | 80.9 | 123,502,592 | 37,792,144 |
-| ESM | 1.67 | 1.91 | 825.46 | 81.41 | 127,221,760 | 35,843,744 |
+| Singleton | 1.63 | 1.98 | 809.08 | 78.73 | 134,369,280 | 37,746,360 |
+| ESM | 1.6 | 2.01 | 786.45 | 62.42 | 122,355,712 | 35,806,440 |
 
 Warmup discarded: 50; measured: 1000; concurrency: 1. Fresh Node process per arm.
 
