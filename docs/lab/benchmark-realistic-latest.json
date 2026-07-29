@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-07-28T19:12:24.572Z",
+  "timestamp": "2026-07-29T03:27:18.032Z",
   "case": "realistic",
   "n": 100,
   "fns": 20,
@@ -122,7 +122,7 @@
   "arms": {
     "singleton": {
       "bytes": 4368709,
-      "buildMs": 154,
+      "buildMs": 168,
       "markersUsedPresent": 100,
       "markersUnusedRetained": 1900,
       "markersUnusedTotal": 1900,
@@ -138,7 +138,7 @@
     },
     "esm": {
       "bytes": 2033506,
-      "buildMs": 103,
+      "buildMs": 94,
       "markersUsedPresent": 100,
       "markersUnusedRetained": 900,
       "markersUnusedTotal": 1900,
@@ -173,45 +173,45 @@
   "pipeline": {
     "warm": {
       "singleton": {
-        "generateMs": 131,
-        "installMs": 86,
-        "bundleMs": 154,
+        "generateMs": 71,
+        "installMs": 70,
+        "bundleMs": 168,
         "artifactBytes": 4368709,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 371
+        "pipelineTotalMs": 309
       },
       "esm": {
-        "generateMs": 131,
-        "installMs": 86,
-        "bundleMs": 103,
+        "generateMs": 71,
+        "installMs": 70,
+        "bundleMs": 94,
         "artifactBytes": 2033506,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 320
+        "pipelineTotalMs": 235
       }
     },
     "cold": {
       "singleton": {
-        "generateMs": 98,
-        "installMs": 86,
-        "bundleMs": 208,
+        "generateMs": 61,
+        "installMs": 4015,
+        "bundleMs": 147,
         "artifactBytes": 4368709,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 392
+        "pipelineTotalMs": 4223
       },
       "esm": {
-        "generateMs": 98,
-        "installMs": 86,
-        "bundleMs": 112,
+        "generateMs": 61,
+        "installMs": 4015,
+        "bundleMs": 82,
         "artifactBytes": 2033506,
         "artifactUploadMs": null,
-        "pipelineTotalMs": 296
+        "pipelineTotalMs": 4158
       }
     }
   },
   "proof": {
-    "timestamp": "2026-07-28T19:12:28.746Z",
-    "githubRunUrl": "https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30390892661",
-    "githubRunId": "30390892661",
+    "timestamp": "2026-07-29T03:27:22.047Z",
+    "githubRunUrl": "https://github.com/atiq-playground/esm-treeshake-lab/actions/runs/30419600866",
+    "githubRunId": "30419600866",
     "runner": "github-actions"
   },
   "request": {
@@ -220,28 +220,28 @@
       "measured": 1000,
       "concurrency": 1,
       "latencyMs": {
-        "p50": 1.7,
-        "p95": 1.99
+        "p50": 1.63,
+        "p95": 1.98
       },
-      "cpuUserMs": 870.85,
-      "cpuSystemMs": 80.9,
-      "rssBytes": 123502592,
-      "heapUsedBytes": 37792144
+      "cpuUserMs": 809.08,
+      "cpuSystemMs": 78.73,
+      "rssBytes": 134369280,
+      "heapUsedBytes": 37746360
     },
     "esm": {
       "warmup": 50,
       "measured": 1000,
       "concurrency": 1,
       "latencyMs": {
-        "p50": 1.67,
-        "p95": 1.91
+        "p50": 1.6,
+        "p95": 2.01
       },
-      "cpuUserMs": 825.46,
-      "cpuSystemMs": 81.41,
-      "rssBytes": 127221760,
-      "heapUsedBytes": 35843744
+      "cpuUserMs": 786.45,
+      "cpuSystemMs": 62.42,
+      "rssBytes": 122355712,
+      "heapUsedBytes": 35806440
     },
     "disclaimer": "Fresh Node process per arm (isolated RSS/heap). Node HTTP on GitHub Actions / local is not a Cloudflare isolate boot and is not production gateway RPS. Relative arm comparison only."
   },
-  "methodologyLimits": "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy."
+  "methodologyLimits": "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Cold wipes node_modules + the Bun install cache before the timed bun install; warm leaves them in place. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy."
 }
