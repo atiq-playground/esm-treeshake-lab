@@ -23,6 +23,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { homedir } from "node:os";
 import * as esbuild from "esbuild";
 import {
   assertCyclesWithThirdParty,
@@ -46,6 +47,7 @@ import {
   type ThirdPartyConfig,
 } from "./bench-metrics.ts";
 import { byteParts, formatBytesDetail } from "./format-bytes.ts";
+import { preparePipelineInstallCache } from "./pipeline-install-cache.ts";
 import {
   resolveThirdPartyPackage,
   TP_CORE_MARKER,
@@ -430,6 +432,18 @@ if (!smoke) {
   const gen = spawnSync("bun", genArgs, { cwd: ROOT, stdio: "inherit" });
   generateMs = Math.round(performance.now() - genT0);
   if (gen.status !== 0) process.exit(gen.status ?? 1);
+  // Realistic cold must time a true empty install; warm leaves caches hot.
+  if (benchCase === "realistic") {
+    if (pipelineCache === "cold") {
+      console.log(
+        "Cold pipeline: wiping node_modules + Bun install cache before timed install",
+      );
+    }
+    preparePipelineInstallCache(pipelineCache, {
+      root: ROOT,
+      bunInstallCache: join(homedir(), ".bun/install/cache"),
+    });
+  }
   const installT0 = performance.now();
   const install = spawnSync("bun", ["install"], {
     cwd: ROOT,

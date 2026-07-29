@@ -376,7 +376,7 @@ export const REQUEST_BENCH_DEFAULTS = {
 } as const;
 
 export const REALISTIC_PIPELINE_METHODOLOGY =
-  "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.";
+  "Compare fair pairs only (singleton vs ESM within the same cache mode). Never average warm and cold into one score. Cold wipes node_modules + the Bun install cache before the timed bun install; warm leaves them in place. Artifact byte/upload timings are a CI proxy — not a Cloudflare Workers deploy.";
 
 export function pipelineTotalMs(parts: {
   generateMs: number;

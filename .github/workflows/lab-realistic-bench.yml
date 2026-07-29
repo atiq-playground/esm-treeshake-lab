@@ -20,16 +20,16 @@ jobs:
         with:
           bun-version: "1.3.14"
 
-      - name: Cold pipeline (no Bun cache)
-        run: |
-          rm -rf ~/.bun/install/cache
-          bun install --frozen-lockfile
-          bun run lab:bench:realistic -- --pipeline-cache=cold
+      # Bootstrap so the bench can load (esbuild import). Cold wipe+timed
+      # install happens inside the harness; do not pre-install after a wipe.
+      - name: Bootstrap install
+        run: bun install --frozen-lockfile
 
-      - name: Warm pipeline (Bun cache)
-        run: |
-          bun install --frozen-lockfile
-          bun run lab:bench:realistic -- --pipeline-cache=warm
+      - name: Cold pipeline (wipe + timed install)
+        run: bun run lab:bench:realistic -- --pipeline-cache=cold
+
+      - name: Warm pipeline (cached timed install)
+        run: bun run lab:bench:realistic -- --pipeline-cache=warm
 
       - name: Request load
         run: bun run lab:bench:request
